@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block body %}
+    {% include "partials/theme-button.html" %}
+    <div class="ml-auto mr-auto my-0 p-4 max-w-5xl h-screen">
+        {% include "partials/banner.html" %}
+        {% include "partials/nav.html" %}
+        <div class="text-center font-mono text-2xl text-fg-light dark:text-fg-dark m-12">
+            <h3>
+                <span class="text-green-light dark:text-green-dark">cd</span>: no such path or directory: <span class="underline">{{ path }}</span>
+            </h3>
+        </div>
+    </div>
+{% endblock %}
