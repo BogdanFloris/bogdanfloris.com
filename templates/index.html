@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block body %}
+    {% include "partials/theme-button.html" %}
+    <div class="ml-auto mr-auto my-0 p-4 max-w-5xl h-screen">
+        {% include "partials/banner.html" %}
+        {% include "partials/nav.html" %}
+        <div class="text-center">
+            <div class="inline-block bg-bg-h-light dark:bg-bg-h-dark border-fg-light dark:border-fg-dark border-1-5 px-8 py-6 max-w-md">
+                <h2 class="font-mono font-bold text-2xl my-4">whoami</h2>
+                <p class="text-left my-4">
+                    I'm Bogdan, a senior software engineer at <a class="link" href="https://datacamp.com">DataCamp</a>, previously at <a class="link" href="https://www.bloomberg.com/engineering">Bloomberg LP</a>. I most often enjoy working on backend systems, but I also like to dabble in frontend development and data science. I'm also a very avid skier and love playing the acoustic guitar.
+                </p>
+                <h2 class="font-mono font-bold text-2xl my-4">whereis</h2>
+                <p class="font-mono text-left text-sm my-4">
+                    email&nbsp;&nbsp;&nbsp;&nbsp;->&nbsp;<a class="link" href="mailto:bogdan.floris@gmail.com">bogdan.floris@gmail.com</a>
+                    <br>
+                    github&nbsp;&nbsp;&nbsp;->&nbsp;<a class="link" href="https://github.com/BogdanFloris">BogdanFloris</a>
+                    <br>
+                    linkedin&nbsp;->&nbsp;<a class="link" href="https://www.linkedin.com/in/bogdan-floris">bogdan-floris</a>
+                    <br>
+                    twitter&nbsp;&nbsp;->&nbsp;<a class="link" href="https://twitter.com/@bogdan_floris">@bogdan_floris</a>
+                    <br>
+                    location&nbsp;->&nbsp;Bucharest/Romania
+                </p>
+            </div>
+        </div>
+    </div>
+{% endblock %}
