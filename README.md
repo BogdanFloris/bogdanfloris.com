@@ -12,6 +12,10 @@ In two separate terminals run:
 tailwind -i src/style.css -o dist/output.css --watch
 ```
 
+and then,
+
 ```sh
 cargo watch -x run
 ```
+
+Or run them in detached mode by appending `&` at the end of the command.
