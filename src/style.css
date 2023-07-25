@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.animate-blink {
+  animation: blink 1s steps(2, start) infinite;
+}
+
+@keyframes blink {
+  to {
+    visibility: hidden;
+  }
+}
+
+.border-1-5 {
+  border-width: 1.5px;
+}
+
+.text-0 {
+  font-size: 0;
+}
+
+.link {
+  @apply underline text-blue-light dark:text-blue-dark hover:text-blue-dim-light dark:hover:text-blue-dim-dark visited:text-purple-light dark:visited:text-purple-dark;
+}
