@@ -1,5 +1,5 @@
 use askama::Template;
-use axum::http::Uri;
+use axum::http::{StatusCode, Uri};
 use axum::routing::get;
 use axum::{debug_handler, Router};
 use std::net::SocketAddr;
@@ -23,11 +23,12 @@ async fn main() {
     let app = Router::new()
         .nest_service("/dist", dist_service)
         .route("/", get(root))
+        .route("/health", get(|| async { StatusCode::NO_CONTENT }))
         .route("/about", get(about))
         .fallback(not_found);
 
     // run the app
-    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+    let addr = SocketAddr::from(([127, 0, 0, 1], 8080));
     tracing::info!("listening on {}", addr);
     axum::Server::bind(&addr)
         .serve(app.into_make_service())
