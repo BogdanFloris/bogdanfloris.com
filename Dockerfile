@@ -5,6 +5,13 @@ WORKDIR /usr/src/app
 COPY . .
 RUN cargo build --release && mv ./target/release/bogdanfloris-com ./bogdanfloris-com
 
+# Build the tailwindcss output file
+RUN apt-get update && apt-get install -y curl
+RUN curl -sLO https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-x64 && \
+    chmod +x tailwindcss-linux-x64 && \
+    mv tailwindcss-linux-x64 tailwindcss
+RUN ./tailwindcss -i src/style.css -o dist/output.css
+
 # Runtime image
 FROM debian:bullseye-slim
 
@@ -14,8 +21,9 @@ RUN useradd -ms /bin/bash app
 USER app
 WORKDIR /app
 
-# Get compiled binaries from builder's cargo install directory
+# Get compiled binaries and css file from builder's cargo install directory
 COPY --from=builder /usr/src/app/bogdanfloris-com /app/bogdanfloris-com
+COPY --from=builder /usr/src/app/dist/output.css /app/dist/output.css
 
 # Run the app
 CMD ./bogdanfloris-com
