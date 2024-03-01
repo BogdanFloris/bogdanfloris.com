@@ -1,5 +1,5 @@
 use askama::Template;
-use axum::http::{StatusCode, Uri};
+use axum::http::Uri;
 use axum::routing::get;
 use axum::{debug_handler, Router};
 use std::net::SocketAddr;
