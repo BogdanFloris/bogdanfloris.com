@@ -23,7 +23,6 @@ async fn main() {
     let app = Router::new()
         .nest_service("/dist", dist_service)
         .route("/", get(root))
-        .route("/health", get(|| async { StatusCode::NO_CONTENT }))
         .route("/about", get(about))
         .fallback(not_found);
 
