@@ -4,7 +4,7 @@
 #
 
 app = "bogdanfloris-com"
-primary_region = "otp"
+primary_region = "ams"
 
 [build]
 

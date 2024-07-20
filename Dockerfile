@@ -6,11 +6,11 @@ COPY . .
 RUN cargo build --release && mv ./target/release/bogdanfloris-com ./bogdanfloris-com
 
 # Build the tailwindcss output file
-RUN apt-get update && apt-get install -y curl
-RUN curl -sLO https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-x64 && \
+RUN apt-get update && apt-get install -y --no-install-recommends curl sqlite3 \
+    && curl -sLO https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-x64 && \
     chmod +x tailwindcss-linux-x64 && \
-    mv tailwindcss-linux-x64 tailwindcss
-RUN ./tailwindcss -i src/style.css -o dist/output.css
+    mv tailwindcss-linux-x64 tailwindcss \
+    && ./tailwindcss -i src/style.css -o dist/output.css
 
 # Runtime image
 FROM debian:bullseye-slim
@@ -26,5 +26,5 @@ COPY --from=builder /usr/src/app/bogdanfloris-com /app/bogdanfloris-com
 COPY --from=builder /usr/src/app/dist/output.css /app/dist/output.css
 
 # Run the app
-CMD ./bogdanfloris-com
+CMD ["./bogdanfloris-com"]
 
