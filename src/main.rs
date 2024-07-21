@@ -11,11 +11,9 @@ use blog::{post, AppState, PageMeta, Post};
 static BLOG_POSTS_DIR: &str = "./blog_posts";
 
 fn add_posts(state: &mut AppState) {
-    let post_one_content = fs::read_to_string(format!("{BLOG_POSTS_DIR}/test_blog_post.html")).unwrap();
-    state.add_post(Post::new(
-        "Hello, world!".to_string(),
-        post_one_content
-    ));
+    let post_one_content =
+        fs::read_to_string(format!("{BLOG_POSTS_DIR}/test_blog_post.html")).unwrap();
+    state.add_post(Post::new("Hello, world!".to_string(), post_one_content));
 }
 
 #[tokio::main]

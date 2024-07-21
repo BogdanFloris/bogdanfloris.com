@@ -67,7 +67,6 @@ pub async fn post_error(uri: Uri) -> PostTemplate {
     }
 }
 
-
 /// Post handler.
 ///
 /// # Panics
@@ -79,8 +78,7 @@ pub async fn post(
     State(state): State<AppState>,
     uri: Uri,
 ) -> PostTemplate {
-    let blog_id = blog_id
-        .parse::<usize>();
+    let blog_id = blog_id.parse::<usize>();
     if blog_id.is_err() {
         return post_error(uri).await;
     }
