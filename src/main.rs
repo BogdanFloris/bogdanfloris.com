@@ -1,14 +1,21 @@
-use askama::Template;
+use askama_axum::Template;
 use axum::http::Uri;
 use axum::routing::get;
 use axum::{debug_handler, Router};
+use std::fs;
 use std::net::SocketAddr;
 use tower_http::services::ServeDir;
 
-struct PageMeta<'a> {
-    page_title: &'a str,
-    banner_title: &'a str,
-    path: String,
+use blog::{post, AppState, PageMeta, Post};
+
+static BLOG_POSTS_DIR: &str = "./blog_posts";
+
+fn add_posts(state: &mut AppState) {
+    let post_one_content = fs::read_to_string(format!("{BLOG_POSTS_DIR}/test_blog_post.html")).unwrap();
+    state.add_post(Post::new(
+        "Hello, world!".to_string(),
+        post_one_content
+    ));
 }
 
 #[tokio::main]
@@ -19,11 +26,18 @@ async fn main() {
     // add the dist folder
     let dist_service = ServeDir::new("./dist");
 
+    // create the state
+    let mut state = AppState::default();
+    add_posts(&mut state);
+
     // create the app
     let app = Router::new()
         .nest_service("/dist", dist_service)
         .route("/", get(root))
         .route("/about", get(about))
+        .route("/blog", get(blog))
+        .route("/post/:id", get(post))
+        .with_state(state)
         .fallback(not_found);
 
     // run the app
@@ -36,47 +50,62 @@ async fn main() {
 }
 
 #[debug_handler]
-async fn root(uri: Uri) -> Index<'static> {
+async fn root(uri: Uri) -> Index {
     let meta = PageMeta {
-        page_title: "hello! | bogdan@web",
-        banner_title: "bogdan@web>",
+        page_title: "hello! | bogdan@web".to_string(),
+        banner_title: "bogdan@web>".to_string(),
         path: uri.to_string(),
     };
     Index { meta }
 }
 
-async fn not_found(uri: Uri) -> NotFound<'static> {
+async fn not_found(uri: Uri) -> NotFound {
     let meta = PageMeta {
-        page_title: "¯\\_(ツ)_/¯ | bogdan@web",
-        banner_title: "not found :(",
+        page_title: "¯\\_(ツ)_/¯ | bogdan@web".to_string(),
+        banner_title: "not found :(".to_string(),
         path: uri.to_string(),
     };
     NotFound { meta }
 }
 
-async fn about(uri: Uri) -> About<'static> {
+async fn about(uri: Uri) -> About {
     let meta = PageMeta {
-        page_title: "about | bogdan@web",
-        banner_title: "about me",
+        page_title: "about | bogdan@web".to_string(),
+        banner_title: "about me".to_string(),
         path: uri.to_string(),
     };
     About { meta }
 }
 
+async fn blog(uri: Uri) -> Blog {
+    let meta = PageMeta {
+        page_title: "blog | bogdan@web".to_string(),
+        banner_title: "blog".to_string(),
+        path: uri.to_string(),
+    };
+    Blog { meta }
+}
+
 #[derive(Template)]
 #[template(path = "index.html")]
-struct Index<'a> {
-    meta: PageMeta<'a>,
+struct Index {
+    meta: PageMeta,
 }
 
 #[derive(Template)]
 #[template(path = "404.html")]
-struct NotFound<'a> {
-    meta: PageMeta<'a>,
+struct NotFound {
+    meta: PageMeta,
 }
 
 #[derive(Template)]
 #[template(path = "about.html")]
-struct About<'a> {
-    meta: PageMeta<'a>,
+struct About {
+    meta: PageMeta,
+}
+
+#[derive(Template)]
+#[template(path = "blog.html")]
+struct Blog {
+    meta: PageMeta,
 }

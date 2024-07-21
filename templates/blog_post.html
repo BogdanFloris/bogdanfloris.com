@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}{{ meta.page_title }}{% endblock %}
+{% block body %}
+    {% include "partials/theme-button.html" %}
+    <div class="ml-auto mr-auto my-0 p-4 max-w-5xl h-screen">
+        {% include "partials/banner.html" %}
+        {% include "partials/nav.html" %}
+        <div class="text-center">
+            <div class="inline-block bg-bg-h-light dark:bg-bg-h-dark border-fg-light dark:border-fg-dark border-1-5 px-8 py-6 max-w-2xl">
+                {{ content|safe}}
+            </div>
+        </div>
+    </div>
+{% endblock %}
