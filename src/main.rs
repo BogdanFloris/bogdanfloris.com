@@ -35,6 +35,7 @@ async fn main() {
         .route("/about", get(about))
         .route("/blog", get(blog))
         .route("/post/:id", get(post))
+        .route("/resume", get(resume))
         .with_state(state)
         .fallback(not_found);
 
@@ -84,6 +85,15 @@ async fn blog(uri: Uri) -> Blog {
     Blog { meta }
 }
 
+async fn resume(uri: Uri) -> Resume {
+    let meta = PageMeta {
+        page_title: "resume | bogdan@web".to_string(),
+        banner_title: "resume".to_string(),
+        path: uri.to_string(),
+    };
+    Resume { meta }
+}
+
 #[derive(Template)]
 #[template(path = "index.html")]
 struct Index {
@@ -105,5 +115,11 @@ struct About {
 #[derive(Template)]
 #[template(path = "blog.html")]
 struct Blog {
+    meta: PageMeta,
+}
+
+#[derive(Template)]
+#[template(path = "resume.html")]
+struct Resume {
     meta: PageMeta,
 }

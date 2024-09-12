@@ -1,42 +1,38 @@
 {% extends "base.html" %}
 {% block title %}{{ meta.page_title }}{% endblock %}
 {% block body %}
-{% include "partials/theme-button.html" %}
-<div class="ml-auto mr-auto my-0 p-4 max-w-5xl h-screen">
-    {% include "partials/banner.html" %}
-    {% include "partials/nav.html" %}
-    <div class="text-center">
-        <div
-            class="inline-block bg-bg-h-light dark:bg-bg-h-dark border-fg-light dark:border-fg-dark border-1-5 px-8 py-6 max-w-2xl">
-            <h1 class="text-left font-bold text-4xl my-4">Hello, there!</h1>
-            <p class="text-left my-2">
-                I'm Bogdan, a software engineer from Bucharest, Romania. I currently work at <a class="link"
-                    href="https://datacamp.com">DataCamp</a>, where we are building a platform which people of all
-                backgrounds or experiences can use to learn data skills. I work there as a full stack engineer in the
-                Content Platform team, and recently I have been working on adding AI-powered features to the platform to
-                improve the both the learning experience and the content.
-            </p>
-            <p class="text-left my-2">
-                Before DataCamp, I used to work at <a class="link"
-                    href="https://www.bloomberg.com/engineering">Bloomberg LP</a> in the MARS team, where we were
-                building a comprehensive suite of risk management tools that enables professionals to analyze their
-                trading and investment portfolios.
-            </p>
-            <p class="text-left my-2">
-                I have been programming for most of my life, having initially started with C/C++ in middle school. I
-                then went on to do Java during my Bachelor's and Python during my Master's. I finally got to learn
-                modern C++ during my time at Bloomberg, and ended up combining Python and web development (TypeScript +
-                React) at DataCamp. In my spare time, I like to experiment with a lot of languages. The backend for this
-                website is Rust with a bit of HTMX and Tailwind to make it pretty and interactive. I have written a
-                small interpreter in Go, I like configuring my Neovim setup in Lua, and I have recently come to love the
-                simplicity of Zig.
-            </p>
-            <p class="text-left my-2">
-                This website, maybe blog in the future, is my own small piece on the internet. It's pretty minimalist as
-                I like to keep things simple. I've chosen to use Gruvbox as the website's color scheme, because I just
-                love it and use it for everything :D.
-            </p>
+    {% include "partials/theme-button.html" %}
+    <div class="ml-auto mr-auto my-0 p-4 max-w-5xl h-screen">
+        {% include "partials/banner.html" %}
+        {% include "partials/nav.html" %}
+        <div class="text-center">
+            <div class="inline-block bg-bg-h-light dark:bg-bg-h-dark border-fg-light dark:border-fg-dark border-1-5 px-8 py-6 max-w-2xl mb-12">
+                <h1 class="text-left font-bold text-4xl my-4">Hello, there!</h1>
+                <p class="text-left my-2">
+                    I'm Bogdan, a software engineer from Bucharest, Romania. I currently work at <a class="link" href="https://datacamp.com">DataCamp</a>, where we are building a platform which people of all
+                    backgrounds or experiences can use to learn data and programming skills. I work there as a senior full stack engineer in the
+                    Content Platform team, where we work on enabling new technologies that can be used to create courses in and maintain the platform where said courses are created.
+                </p>
+                <p class="text-left my-2">
+                    Before DataCamp, I used to work at <a class="link" href="https://www.bloomberg.com/engineering">Bloomberg LP</a> in the MARS team, where we were
+                    building a comprehensive suite of risk management tools that enables professionals to analyze their
+                    trading and investment portfolios.
+                </p>
+                <p class="text-left my-2">
+                    I have been programming for most of my life, having initially started with C/C++ in middle school. I
+                    then went on to do Java during my Bachelor's and Python during my Master's. I finally got to learn
+                    modern C++ during my time at Bloomberg, and ended up combining Python and web development (TypeScript +
+                    React) at DataCamp. In my spare time, I like to experiment with a lot of languages. The backend for this
+                    website is Rust with a bit of HTMX and Tailwind to make it pretty and interactive. I have written a
+                    small interpreter in Go, I like configuring my Neovim setup in Lua, and I have recently come to love the
+                    simplicity of Zig.
+                </p>
+                <p class="text-left my-2">
+                    This website, maybe blog in the future, is my own small piece on the internet. It's pretty minimalist as
+                    I like to keep things simple. I've chosen to use Gruvbox as the website's color scheme, because I just
+                    love it and use it for everything.
+                </p>
+            </div>
         </div>
     </div>
-</div>
 {% endblock %}
