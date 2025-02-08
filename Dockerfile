@@ -7,7 +7,7 @@ RUN cargo build --release && mv ./target/release/bogdanfloris-com ./bogdanfloris
 
 # Build the tailwindcss output file
 RUN apt-get update && apt-get install -y --no-install-recommends curl sqlite3 \
-    && curl -sLO https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-x64 && \
+    && curl -sLO https://github.com/tailwindlabs/tailwindcss/releases/download/v3.3.2/tailwindcss-linux-x64 && \
     chmod +x tailwindcss-linux-x64 && \
     mv tailwindcss-linux-x64 tailwindcss \
     && ./tailwindcss -i src/style.css -o dist/output.css
