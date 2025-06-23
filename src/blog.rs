@@ -1,5 +1,3 @@
-use std::usize;
-
 use askama_axum::Template;
 use axum::{
     extract::{Path, State},
