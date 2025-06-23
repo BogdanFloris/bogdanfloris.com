@@ -26,11 +26,11 @@ clean: ## Deletes all compiled / executable files
 
 .PHONY: run
 run: ## Runs the backend server
-	@$(CARGO) run
+	@$(CARGO) run -- $(ARGS)
 
 .PHONY: dev
 dev: ## Runs the backend server with hot-reload (Must have cargo watch installed)
-	@$(CARGO) watch -x run
+	@$(CARGO) watch -x "run -- $(ARGS)"
 
 .PHONY: tailwind
 tailwind: ## Runs the tailwind compile command with --watch flag

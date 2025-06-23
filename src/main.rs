@@ -2,13 +2,24 @@ use askama_axum::Template;
 use axum::http::Uri;
 use axum::routing::get;
 use axum::{debug_handler, Router};
+use clap::Parser;
 use std::fs;
-use std::net::SocketAddr;
+use std::net::{IpAddr, SocketAddr};
 use tower_http::services::ServeDir;
 
 use blog::{post, AppState, PageMeta, Post};
 
 static BLOG_POSTS_DIR: &str = "./blog_posts";
+
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    #[arg(short = 'H', long, default_value = "localhost")]
+    host: String,
+
+    #[arg(short, long, default_value_t = 8080)]
+    port: u16,
+}
 
 fn add_posts(state: &mut AppState) {
     let post_one_content =
@@ -18,17 +29,12 @@ fn add_posts(state: &mut AppState) {
 
 #[tokio::main]
 async fn main() {
-    // initialize tracing
+    let args = Args::parse();
     tracing_subscriber::fmt::init();
-
-    // add the dist folder
     let dist_service = ServeDir::new("./dist");
-
-    // create the state
     let mut state = AppState::default();
     add_posts(&mut state);
 
-    // create the app
     let app = Router::new()
         .nest_service("/dist", dist_service)
         .route("/", get(root))
@@ -39,8 +45,16 @@ async fn main() {
         .with_state(state)
         .fallback(not_found);
 
-    // run the app
-    let addr = SocketAddr::from(([0, 0, 0, 0], 8080));
+    let ip_addr: IpAddr = args.host.parse().unwrap_or_else(|_| {
+        if args.host == "localhost" {
+            "127.0.0.1".parse().unwrap()
+        } else {
+            tracing::warn!("Invalid host '{}', defaulting to 0.0.0.0", args.host);
+            "0.0.0.0".parse().unwrap()
+        }
+    });
+
+    let addr = SocketAddr::from((ip_addr, args.port));
     tracing::info!("listening on {}", addr);
     axum::Server::bind(&addr)
         .serve(app.into_make_service())
