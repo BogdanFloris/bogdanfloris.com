@@ -12,8 +12,14 @@
       let pkgs = nixpkgs.legacyPackages.${system};
       in {
         devShells.default = pkgs.mkShell {
-          packages =
-            [ pkgs.cargo pkgs.rustc pkgs.clippy pkgs.rustfmt pkgs.tailwindcss ];
+          packages = [
+            pkgs.cargo
+            pkgs.rustc
+            pkgs.clippy
+            pkgs.rustfmt
+            pkgs.cargo-watch
+            pkgs.tailwindcss
+          ];
         };
       });
 }
