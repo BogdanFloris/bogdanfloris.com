@@ -2,8 +2,8 @@ APP_NAME=bogdanfloris-com
 VERSION?=v0.1.0
 BUILD=$(shell git rev-parse HEAD)
 
-CARGO=~/.cargo/bin/cargo
-TAILWIND=/usr/local/bin/tailwindcss
+CARGO=cargo
+TAILWIND=tailwindcss
 
 .DEFAULT_GOAL := help
 
