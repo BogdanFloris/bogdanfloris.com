@@ -9,7 +9,7 @@ It's written in Rust using the Axum framework.
 In two separate terminals run:
 
 ```sh
-tailwind -i src/style.css -o dist/output.css --watch
+tailwind -i src/style.css -o dist/css/output.css --watch
 ```
 
 and then,

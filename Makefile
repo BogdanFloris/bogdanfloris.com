@@ -34,15 +34,15 @@ dev: ## Runs the backend server with hot-reload (Must have cargo watch installed
 
 .PHONY: tailwind
 tailwind: ## Runs the tailwind compile command with --watch flag
-	@$(TAILWIND) -i src/style.css -o dist/output.css --watch
+	@$(TAILWIND) -i src/style.css -o dist/css/output.css --watch
 
 .PHONY: build
 build: ## Compiles the server
-	@${TAILWIND} -i src/style.css -o dist/output.css
+	@${TAILWIND} -i src/style.css -o dist/css/output.css
 	@$(CARGO) build
 
 .PHONY: build-release
 build-release: ## Compiles the server with release flag
-	@${TAILWIND} -i src/style.css -o dist/output.css
+	@${TAILWIND} -i src/style.css -o dist/css/output.css
 	@$(CARGO) build --release
 	
