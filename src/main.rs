@@ -23,8 +23,8 @@ struct Args {
 
 fn add_posts(state: &mut AppState) {
     let post_one_content =
-        fs::read_to_string(format!("{BLOG_POSTS_DIR}/test_blog_post.html")).unwrap();
-    state.add_post(Post::new("Test Blog Post".to_string(), post_one_content));
+        fs::read_to_string(format!("{BLOG_POSTS_DIR}/personal_website_blog.html")).unwrap();
+    state.add_post(Post::new("Post #0".to_string(), post_one_content));
 }
 
 #[tokio::main]

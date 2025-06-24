@@ -1,0 +1,115 @@
+<h1 class="mb-6 h1">Building a Personal Website with Rust and Axum</h1>
+
+<p class="mb-4 body-text">
+    I mainly use React at work, which I'm not a particularly big fan of for a
+    multiude of reasons I won't go into much detail here. So, when choosing a
+    stack to build my personal website in, React was out of the question. I wanted
+    to try out Svelte because I have heard good things about it from my
+    co-workers, but Svelte is still JavaScript frontend framework number
+    #92321223.
+</p>
+
+<p class="mb-4 body-text">
+    So, after not so much consideration, I went with what I knew when I first
+    started building websites, templating. But with a bit of a twist. I am
+    learning Rust in pursuit of my goal to deepen my knowledge on systems
+    engineering, so it seemed like a natural choice. As for why I chose Axum?
+    ¯\_(ツ)_/¯. Reddit recommends it and it seemed simple enough. And it really
+    is!
+</p>
+
+<h2 class="mt-8 mb-4 h2">Getting Started</h2>
+
+<p class="mb-4 body-text">
+    First, let's set up a basic Axum server. You'll need to add the following
+    dependencies to your <code class="code-inline">Cargo.toml</code> file:
+</p>
+
+<div class="code-block">
+<pre>[dependencies]
+axum = "0.6"
+tokio = { version = "1", features = ["full"] }
+tower = "0.4"</pre>
+</div>
+
+<h2 class="mt-8 mb-4 h2">Creating the Server</h2>
+
+<p class="mb-4 body-text">Seems simple enough:</p>
+
+<ul class="mb-4 ml-8 space-y-2 list-disc">
+    <li>define some paths on the router</li>
+    <li>get a host and a port on which to run this bad boy on</li>
+    <li>launch the server</li>
+</ul>
+
+<div class="code-block">
+<pre>use axum::{Router, routing::get};
+
+#[tokio::main]
+async fn main() {
+    let app = Router::new()
+        .route("/", get(root))
+        .route("/about", get(about));
+
+    let addr = "0.0.0.0:3000".parse().unwrap();
+    println!("listening on {}", addr);
+    
+    axum::Server::bind(&addr)
+        .serve(app.into_make_service())
+        .await
+        .unwrap();
+}
+
+async fn root() -> &'static str {
+    "Hello, World!"
+}
+
+async fn about() -> &'static str {
+    "About page"
+}</pre>
+</div>
+
+<h3 class="mt-6 mb-4 h3">Running the Application</h3>
+
+<p class="mb-4 body-text">
+    To run your application, simply use
+    <code class="code-inline">cargo run</code> in your terminal. The server will
+    start listening on port 3000.
+</p>
+
+<h2 class="mt-8 mb-4 h2">Styling with Tailwind and Gruvbox</h2>
+
+<p class="mb-4 body-text">
+    For styling, I combined Tailwind CSS with the Gruvbox color scheme. I am basically obsessed with Gruvbox in general, I run it on everything, so it seemed natural to also use it for the personal website.
+</p>
+
+<h2 class="mt-8 mb-4 h2">Adding Templates with Askama</h2>
+
+<p class="mb-4 body-text">
+    For templating, I chose Askama because it provides compile-time template
+    checking. This means template errors are caught during compilation rather than
+    at runtime:
+</p>
+
+<div class="code-block">
+<pre>use askama_axum::Template;
+
+#[derive(Template)]
+#[template(path = "index.html")]
+struct IndexTemplate {
+    title: String,
+    content: String,
+}</pre>
+</div>
+
+<h2 class="mt-8 mb-4 h2">Future Improvements</h2>
+
+<p class="mb-4 body-text">
+    I plan to add some interactivity to the website besides the small dark/light mode toggle to test "frameworks" like HTMX. I've used it in another templating projects slightly, but I want to see how far a thing like HTMX could be pushed until one needs to crawl back in React's arm.
+</p>
+
+<p class="body-text">
+    You can find the complete source code for this website on
+    <a href="https://github.com/BogdanFloris/bogdanfloris.com" class="link">GitHub</a>. Feel free to use it as
+    inspiration for your own Rust web projects!
+</p>
