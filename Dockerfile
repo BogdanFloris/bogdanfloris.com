@@ -17,7 +17,7 @@ WORKDIR /app
 # Get compiled binaries and css file from builder's cargo install directory
 COPY --from=builder /usr/src/app/bogdanfloris-com /app/bogdanfloris-com
 COPY --from=builder /usr/src/app/dist/css/output.css /app/dist/css/output.css
-COPY --from=builder /usr/src/app/dist/favicon.ico /app/dist/favicon.ico
+COPY --from=builder /usr/src/app/dist/favicon.svg /app/dist/favicon.svg
 COPY --from=builder /usr/src/app/blog_posts /app/blog_posts
 
 # Run the app
