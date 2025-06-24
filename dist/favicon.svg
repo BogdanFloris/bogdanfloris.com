@@ -1,0 +1,36 @@
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <!-- Monitor body -->
+  <rect x="2" y="3" width="28" height="22" rx="2" fill="#282828" stroke="#fbf1c7" stroke-width="2"/>
+  
+  <!-- Screen -->
+  <rect x="5" y="6" width="22" height="16" fill="#1d2021"/>
+  
+  <!-- Screen glow effect -->
+  <rect x="5" y="6" width="22" height="16" fill="url(#glow)" opacity="0.3"/>
+  
+  <!-- Scanlines -->
+  <g opacity="0.4">
+    <line x1="5" y1="8" x2="27" y2="8" stroke="#b8bb26" stroke-width="0.5"/>
+    <line x1="5" y1="10" x2="27" y2="10" stroke="#b8bb26" stroke-width="0.5"/>
+    <line x1="5" y1="12" x2="27" y2="12" stroke="#b8bb26" stroke-width="0.5"/>
+    <line x1="5" y1="14" x2="27" y2="14" stroke="#b8bb26" stroke-width="0.5"/>
+    <line x1="5" y1="16" x2="27" y2="16" stroke="#b8bb26" stroke-width="0.5"/>
+    <line x1="5" y1="18" x2="27" y2="18" stroke="#b8bb26" stroke-width="0.5"/>
+    <line x1="5" y1="20" x2="27" y2="20" stroke="#b8bb26" stroke-width="0.5"/>
+  </g>
+  
+  <!-- Terminal text -->
+  <text x="7" y="15" fill="#b8bb26" font-family="monospace" font-size="8" font-weight="bold">$_</text>
+  
+  <!-- Monitor stand -->
+  <rect x="14" y="25" width="4" height="3" fill="#fbf1c7"/>
+  <rect x="12" y="28" width="8" height="2" fill="#fbf1c7"/>
+  
+  <!-- Gradient for glow effect -->
+  <defs>
+    <radialGradient id="glow">
+      <stop offset="0%" stop-color="#b8bb26" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#b8bb26" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+</svg>
