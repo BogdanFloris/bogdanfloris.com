@@ -5,13 +5,6 @@ WORKDIR /usr/src/app
 COPY . .
 RUN cargo build --release && mv ./target/release/bogdanfloris-com ./bogdanfloris-com
 
-# Build the tailwindcss output file
-RUN apt-get update && apt-get install -y --no-install-recommends curl sqlite3 \
-    && curl -sLO https://github.com/tailwindlabs/tailwindcss/releases/download/v3.3.2/tailwindcss-linux-x64 && \
-    chmod +x tailwindcss-linux-x64 && \
-    mv tailwindcss-linux-x64 tailwindcss \
-    && ./tailwindcss -i src/style.css -o dist/css/output.css
-
 # Runtime image
 FROM debian:bullseye-slim
 
