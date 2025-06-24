@@ -14,7 +14,7 @@ static BLOG_POSTS_DIR: &str = "./blog_posts";
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    #[arg(short = 'H', long, default_value = "localhost")]
+    #[arg(short = 'H', long, default_value = "0.0.0.0")]
     host: String,
 
     #[arg(short, long, default_value_t = 8080)]
@@ -45,14 +45,7 @@ async fn main() {
         .with_state(state)
         .fallback(not_found);
 
-    let ip_addr: IpAddr = args.host.parse().unwrap_or_else(|_| {
-        if args.host == "localhost" {
-            "127.0.0.1".parse().unwrap()
-        } else {
-            tracing::warn!("Invalid host '{}', defaulting to 0.0.0.0", args.host);
-            "0.0.0.0".parse().unwrap()
-        }
-    });
+    let ip_addr: IpAddr = args.host.parse().unwrap();
 
     let addr = SocketAddr::from((ip_addr, args.port));
     tracing::info!("listening on {}", addr);
