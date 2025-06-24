@@ -19,6 +19,7 @@
             pkgs.rustfmt
             pkgs.cargo-watch
             pkgs.tailwindcss
+            pkgs.flyctl
           ];
         };
       });
