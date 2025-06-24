@@ -2,9 +2,11 @@
 {% block title %}{{ meta.page_title }}{% endblock %}
 {% block body %}
 {% include "partials/theme-button.html" %}
-<div class="ml-auto mr-auto my-0 p-4 max-w-5xl h-screen">
-    {% include "partials/banner.html" %}
-    {% include "partials/nav.html" %}
-    {% include "partials/resume-body.html" %}
+<div class="min-h-screen px-4 sm:px-6 py-16">
+    <div class="max-w-2xl mx-auto">
+        {% include "partials/banner.html" %}
+        {% include "partials/nav.html" %}
+        {% include "partials/resume-body.html" %}
+    </div>
 </div>
 {% endblock %}

@@ -2,15 +2,17 @@
 {% block title %}{{ meta.page_title }}{% endblock %}
 {% block body %}
     {% include "partials/theme-button.html" %}
-    <div class="ml-auto mr-auto my-0 p-4 max-w-5xl h-screen">
-        {% include "partials/banner.html" %}
-        {% include "partials/nav.html" %}
-        <div class="text-center font-sans text-2xl text-fg-light dark:text-fg-dark m-12">
-            <h3>
-                Haven't had time to build this page yet.
-                <br>
-                Check back soon!
-            </h3>
+    <div class="min-h-screen px-4 sm:px-6 py-16">
+        <div class="max-w-2xl mx-auto">
+            {% include "partials/banner.html" %}
+            {% include "partials/nav.html" %}
+            <div class="bg-bg-h-light dark:bg-bg-h-dark border-fg-light dark:border-fg-dark border-1-5 px-6 sm:px-8 py-6 mb-12">
+                <h3 class="text-center font-sans text-2xl my-4">
+                    Haven't had time to build this page yet.
+                    <br>
+                    Check back soon!
+                </h3>
+            </div>
         </div>
     </div>
 {% endblock %}
