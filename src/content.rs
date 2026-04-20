@@ -21,13 +21,13 @@ pub fn split_frontmatter(source: &str) -> Result<(&str, &str), String> {
         .strip_prefix("---\n")
         .or_else(|| source.strip_prefix("---\r\n"))
         .ok_or_else(|| "missing opening --- fence".to_string())?;
-    let end_marker = rest
+    let (end_marker, end_len) = rest
         .find("\n---\n")
-        .or_else(|| rest.find("\n---\r\n"))
+        .map(|i| (i, "\n---\n".len()))
+        .or_else(|| rest.find("\n---\r\n").map(|i| (i, "\n---\r\n".len())))
         .ok_or_else(|| "missing closing --- fence".to_string())?;
     let yaml = &rest[..end_marker];
-    let body_start = end_marker + "\n---\n".len();
-    let body = &rest[body_start..];
+    let body = &rest[end_marker + end_len..];
     Ok((yaml, body))
 }
 
@@ -101,5 +101,15 @@ mod tests {
         assert_eq!(fm.tags, vec!["rust".to_string(), "web".to_string()]);
         assert!(!fm.draft);
         assert_eq!(fm.slug, None);
+    }
+
+    #[test]
+    fn split_frontmatter_handles_crlf_line_endings() {
+        let src = "---\r\ntitle: Hi\r\ndate: 2025-01-01\r\n---\r\nBody text.\r\n";
+        let (fm, body) = split_frontmatter(src).unwrap();
+        assert!(fm.contains("title: Hi"));
+        // Body must not start with a stray \r from the closing fence.
+        assert!(!body.starts_with('\r'));
+        assert_eq!(body, "Body text.\r\n");
     }
 }
