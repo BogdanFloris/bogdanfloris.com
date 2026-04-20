@@ -130,6 +130,7 @@ pub fn render_markdown(source: &str) -> String {
         }
     }
 
+    debug_assert!(in_code_block.is_none(), "unterminated code block");
     pulldown_cmark::html::push_html(&mut html_out, events.into_iter());
     html_out
 }
@@ -216,5 +217,12 @@ mod tests {
         let html = render_markdown(md);
         assert!(html.contains("<pre"));
         assert!(html.contains("plain text"));
+    }
+
+    #[test]
+    fn render_markdown_falls_back_to_plain_text_for_unknown_language() {
+        let html = render_markdown("```xyzzy\nsome code\n```");
+        assert!(html.contains("<pre"));
+        assert!(html.contains("some code"));
     }
 }
