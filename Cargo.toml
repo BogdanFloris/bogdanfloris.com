@@ -12,7 +12,11 @@ axum = { version = "0.7.9", features = ["macros"] }
 cargo-watch = "8.4.0"
 chrono = "0.4.38"
 clap = { version = "4.5.40", features = ["derive"] }
+pulldown-cmark = "0.13.3"
+quick-xml = { version = "0.39.2", features = ["serialize"] }
 serde = { version = "1.0.219", features = ["derive"] }
+serde_yaml = "0.9.34"
+syntect = { version = "5.3.0", default-features = false, features = ["default-fancy"] }
 tokio = { version = "1.44.2", features = ["full"] }
 tower-http = { version = "0.5.2", features = ["fs"] }
 tracing = "0.1.41"
