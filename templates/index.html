@@ -12,7 +12,7 @@
                     I'm Bogdan, a software engineer with 6 YOE at <a class="link" href="https://datacamp.com">DataCamp</a>, previously at <a class="link" href="https://www.bloomberg.com/engineering">Bloomberg LP</a>. I most often enjoy working on backend systems, but I also like to dabble in frontend development and data science. I'm also a very avid skier and love playing the acoustic guitar.
                 </p>
                 <h2 class="font-mono h2 mb-6 text-center">whereis</h2>
-                <p class="font-mono text-sm mb-0">
+                <p class="font-mono text-sm mb-8">
                     email&nbsp;&nbsp;&nbsp;&nbsp;->&nbsp;<a class="link" href="mailto:bogdan.floris@gmail.com">bogdan.floris@gmail.com</a>
                     <br>
                     github&nbsp;&nbsp;&nbsp;->&nbsp;<a class="link" href="https://github.com/BogdanFloris">BogdanFloris</a>
@@ -23,6 +23,16 @@
                     <br>
                     location&nbsp;->&nbsp;Bucharest/Romania
                 </p>
+                {% if !recent.is_empty() %}
+                <h2 class="font-mono h2 mb-6 text-center">recent</h2>
+                <ul class="space-y-3">
+                    {% for post in recent %}
+                    <li>
+                        <a class="link" href="/post/{{ post.slug }}">{{ post.title }}</a> - <span class="text-gray-light dark:text-gray-dark">{{ post.date }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
             </div>
         </div>
     </div>

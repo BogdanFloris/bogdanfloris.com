@@ -1,15 +1,14 @@
 use askama_axum::Template;
 use axum::http::Uri;
 use axum::routing::get;
-use axum::{debug_handler, Router};
+use axum::{extract::State, Router};
 use clap::Parser;
-use std::fs;
 use std::net::{IpAddr, SocketAddr};
+use std::path::PathBuf;
 use tower_http::services::ServeDir;
 
-use blog::{post, AppState, PageMeta, Post};
-
-static BLOG_POSTS_DIR: &str = "./blog_posts";
+use blog::content::load_posts;
+use blog::{format_date, post, AppState, PageMeta};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -19,96 +18,132 @@ struct Args {
 
     #[arg(short, long, default_value_t = 8080)]
     port: u16,
-}
 
-fn add_posts(state: &mut AppState) {
-    let post_one_content =
-        fs::read_to_string(format!("{BLOG_POSTS_DIR}/personal_website_blog.html")).unwrap();
-    state.add_post(Post::new("Post #0".to_string(), post_one_content));
+    /// Include posts marked `draft: true` in the frontmatter.
+    #[arg(long)]
+    drafts: bool,
+
+    /// Directory containing blog post markdown files.
+    #[arg(long, default_value = "./blog_posts")]
+    posts_dir: PathBuf,
 }
 
 #[tokio::main]
 async fn main() {
     let args = Args::parse();
     tracing_subscriber::fmt::init();
+
+    let posts = load_posts(&args.posts_dir, args.drafts);
+    tracing::info!("loaded {} post(s) from {:?}", posts.len(), args.posts_dir);
+    let state = AppState::from_posts(posts);
+
     let dist_service = ServeDir::new("./dist");
-    let mut state = AppState::default();
-    add_posts(&mut state);
 
     let app = Router::new()
         .nest_service("/dist", dist_service)
-        .route("/", get(root))
+        .route("/", get(home))
         .route("/about", get(about))
-        .route("/blog", get(blog))
-        .route("/post/:id", get(post))
+        .route("/blog", get(blog_index))
+        .route("/post/:slug", get(post))
         .route("/resume", get(resume))
+        .route("/rss.xml", get(rss))
         .with_state(state)
         .fallback(not_found);
 
-    let ip_addr: IpAddr = args.host.parse().unwrap();
-
+    let ip_addr: IpAddr = args.host.parse().expect("invalid host");
     let addr = SocketAddr::from((ip_addr, args.port));
     tracing::info!("listening on {}", addr);
-    let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
-    axum::serve(listener, app).await.unwrap();
+
+    let listener = tokio::net::TcpListener::bind(addr).await.expect("bind failed");
+    axum::serve(listener, app).await.expect("serve failed");
 }
 
-#[debug_handler]
-async fn root(uri: Uri) -> Index {
+async fn home(uri: Uri, State(state): State<AppState>) -> Home {
     let meta = PageMeta {
-        page_title: "hello! | bogdan@web".to_string(),
-        banner_title: "bogdan@web>".to_string(),
+        page_title: "bogdan floris".to_string(),
+        banner_title: "bogdan floris".to_string(),
         path: uri.to_string(),
     };
-    Index { meta }
-}
-
-async fn not_found(uri: Uri) -> NotFound {
-    let meta = PageMeta {
-        page_title: "¯\\_(ツ)_/¯ | bogdan@web".to_string(),
-        banner_title: "not found :(".to_string(),
-        path: uri.to_string(),
-    };
-    NotFound { meta }
+    let recent: Vec<RecentPost> = state
+        .latest(3)
+        .into_iter()
+        .map(|p| RecentPost {
+            title: p.title.clone(),
+            slug: p.slug.clone(),
+            date: format_date(&p.date),
+            tags: p.tags.clone(),
+        })
+        .collect();
+    Home { meta, recent }
 }
 
 async fn about(uri: Uri) -> About {
     let meta = PageMeta {
-        page_title: "about | bogdan@web".to_string(),
-        banner_title: "about me".to_string(),
+        page_title: "about | bogdan floris".to_string(),
+        banner_title: "about".to_string(),
         path: uri.to_string(),
     };
     About { meta }
 }
 
-async fn blog(uri: Uri) -> Blog {
+async fn blog_index(uri: Uri, State(state): State<AppState>) -> BlogIndex {
     let meta = PageMeta {
-        page_title: "blog | bogdan@web".to_string(),
+        page_title: "blog | bogdan floris".to_string(),
         banner_title: "blog".to_string(),
         path: uri.to_string(),
     };
-    Blog { meta }
+    let posts: Vec<RecentPost> = state
+        .all()
+        .into_iter()
+        .map(|p| RecentPost {
+            title: p.title.clone(),
+            slug: p.slug.clone(),
+            date: format_date(&p.date),
+            tags: p.tags.clone(),
+        })
+        .collect();
+    BlogIndex { meta, posts }
 }
 
 async fn resume(uri: Uri) -> Resume {
     let meta = PageMeta {
-        page_title: "resume | bogdan@web".to_string(),
+        page_title: "resume | bogdan floris".to_string(),
         banner_title: "resume".to_string(),
         path: uri.to_string(),
     };
     Resume { meta }
 }
 
-#[derive(Template)]
-#[template(path = "index.html")]
-struct Index {
-    meta: PageMeta,
+async fn not_found(uri: Uri) -> NotFound {
+    let meta = PageMeta {
+        page_title: "not found | bogdan floris".to_string(),
+        banner_title: "not found".to_string(),
+        path: uri.to_string(),
+    };
+    NotFound { meta }
+}
+
+async fn rss(State(state): State<AppState>) -> impl axum::response::IntoResponse {
+    let xml = blog::rss::build_feed(&state.all());
+    (
+        [(axum::http::header::CONTENT_TYPE, "application/rss+xml; charset=utf-8")],
+        xml,
+    )
+}
+
+#[derive(Clone)]
+pub struct RecentPost {
+    pub title: String,
+    pub slug: String,
+    pub date: String,
+    pub tags: Vec<String>,
 }
 
 #[derive(Template)]
-#[template(path = "404.html")]
-struct NotFound {
+#[template(path = "index.html")]
+struct Home {
     meta: PageMeta,
+    recent: Vec<RecentPost>,
 }
 
 #[derive(Template)]
@@ -119,12 +154,19 @@ struct About {
 
 #[derive(Template)]
 #[template(path = "blog.html")]
-struct Blog {
+struct BlogIndex {
     meta: PageMeta,
+    posts: Vec<RecentPost>,
 }
 
 #[derive(Template)]
 #[template(path = "resume.html")]
 struct Resume {
+    meta: PageMeta,
+}
+
+#[derive(Template)]
+#[template(path = "404.html")]
+struct NotFound {
     meta: PageMeta,
 }

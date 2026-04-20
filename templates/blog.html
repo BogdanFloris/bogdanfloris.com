@@ -13,9 +13,11 @@
                     inspiration hits.
                 </p>
                 <ul class="space-y-3">
+                    {% for post in posts %}
                     <li>
-                        <a class="link" href="/post/1">Building a Personal Website with Rust and Axum</a> - <span class="text-gray-light dark:text-gray-dark">2025-06-24</span>
+                        <a class="link" href="/post/{{ post.slug }}">{{ post.title }}</a> - <span class="text-gray-light dark:text-gray-dark">{{ post.date }}</span>
                     </li>
+                    {% endfor %}
                 </ul>
             </div>
         </div>

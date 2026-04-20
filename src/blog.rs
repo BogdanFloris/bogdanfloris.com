@@ -1,43 +1,52 @@
 pub mod content;
+pub mod rss;
 
 use askama_axum::Template;
 use axum::{
     extract::{Path, State},
-    http::Uri,
+    http::{StatusCode, Uri},
+    response::IntoResponse,
 };
+use chrono::NaiveDate;
+use std::collections::HashMap;
 
-#[derive(Debug, Clone)]
-pub struct Post {
-    title: String,
-    content: String,
-}
+pub use content::Post;
 
-impl Post {
-    #[must_use]
-    pub fn new(title: String, content: String) -> Self {
-        Self { title, content }
-    }
-}
-
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct AppState {
-    posts: Vec<Post>,
+    posts_by_slug: HashMap<String, Post>,
+    slugs_newest_first: Vec<String>,
 }
 
 impl AppState {
     #[must_use]
-    pub fn new() -> Self {
-        Self { posts: vec![] }
+    pub fn from_posts(posts: Vec<Post>) -> Self {
+        let slugs_newest_first: Vec<String> = posts.iter().map(|p| p.slug.clone()).collect();
+        let mut posts_by_slug = HashMap::with_capacity(posts.len());
+        for post in posts {
+            posts_by_slug.insert(post.slug.clone(), post);
+        }
+        Self { posts_by_slug, slugs_newest_first }
     }
 
-    pub fn add_post(&mut self, post: Post) {
-        self.posts.push(post);
+    #[must_use]
+    pub fn get(&self, slug: &str) -> Option<&Post> {
+        self.posts_by_slug.get(slug)
     }
-}
 
-impl Default for AppState {
-    fn default() -> Self {
-        Self::new()
+    /// Returns all posts, newest-first.
+    #[must_use]
+    pub fn all(&self) -> Vec<&Post> {
+        self.slugs_newest_first
+            .iter()
+            .filter_map(|s| self.posts_by_slug.get(s))
+            .collect()
+    }
+
+    /// Returns the `n` most recent posts.
+    #[must_use]
+    pub fn latest(&self, n: usize) -> Vec<&Post> {
+        self.all().into_iter().take(n).collect()
     }
 }
 
@@ -47,54 +56,41 @@ pub struct PageMeta {
     pub path: String,
 }
 
+pub fn format_date(date: &NaiveDate) -> String {
+    date.format("%Y-%m-%d").to_string()
+}
+
 #[derive(Template)]
 #[template(path = "blog_post.html")]
 pub struct PostTemplate {
-    meta: PageMeta,
-    content: String,
+    pub meta: PageMeta,
+    pub title: String,
+    pub date: String,
+    pub tags: Vec<String>,
+    pub rendered_html: String,
 }
 
-#[allow(clippy::unused_async)]
-pub async fn post_error(uri: Uri) -> PostTemplate {
-    let meta = PageMeta {
-        page_title: "Post not found | bogdan@web".to_string(),
-        banner_title: "Post not found".to_string(),
-        path: uri.to_string(),
-    };
-    PostTemplate {
-        meta,
-        content: "<p>Oops, there is nothing here.</p>".to_string(),
-    }
-}
-
-/// Post handler.
-///
-/// # Panics
-///
-/// Panics if the blog post does not exist.
-#[allow(clippy::unused_async)]
 pub async fn post(
-    Path(blog_id): Path<String>,
+    Path(slug): Path<String>,
     State(state): State<AppState>,
     uri: Uri,
-) -> PostTemplate {
-    let blog_id = blog_id.parse::<usize>();
-    if blog_id.is_err() {
-        return post_error(uri).await;
-    }
-    let post = state.posts.get(blog_id.unwrap() - 1);
-    if post.is_none() {
-        return post_error(uri).await;
-    }
-    let post = post.unwrap();
-    let title = post.title.to_lowercase();
-    let meta = PageMeta {
-        page_title: format!("{title} | bogdan@web").to_string(),
-        banner_title: title.clone(),
-        path: uri.to_string(),
-    };
-    PostTemplate {
-        meta,
-        content: post.content.clone(),
+) -> axum::response::Response {
+    match state.get(&slug) {
+        Some(post) => {
+            let meta = PageMeta {
+                page_title: format!("{} | bogdan floris", post.title),
+                banner_title: post.title.clone(),
+                path: uri.to_string(),
+            };
+            PostTemplate {
+                meta,
+                title: post.title.clone(),
+                date: format_date(&post.date),
+                tags: post.tags.clone(),
+                rendered_html: post.rendered_html.clone(),
+            }
+            .into_response()
+        }
+        None => (StatusCode::NOT_FOUND, "post not found").into_response(),
     }
 }
