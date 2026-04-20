@@ -1,5 +1,11 @@
 use chrono::NaiveDate;
+use pulldown_cmark::{CodeBlockKind, Event, Options, Parser, Tag, TagEnd};
 use serde::Deserialize;
+use std::sync::OnceLock;
+use syntect::easy::HighlightLines;
+use syntect::highlighting::ThemeSet;
+use syntect::html::{styled_line_to_highlighted_html, IncludeBackground};
+use syntect::parsing::SyntaxSet;
 
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct Frontmatter {
@@ -52,6 +58,80 @@ pub fn derive_slug(title: &str) -> String {
         slug.pop();
     }
     slug
+}
+
+struct SyntectBundle {
+    syntax_set: SyntaxSet,
+    theme_set: ThemeSet,
+}
+
+fn syntect() -> &'static SyntectBundle {
+    static BUNDLE: OnceLock<SyntectBundle> = OnceLock::new();
+    BUNDLE.get_or_init(|| SyntectBundle {
+        syntax_set: SyntaxSet::load_defaults_newlines(),
+        theme_set: ThemeSet::load_defaults(),
+    })
+}
+
+pub fn render_markdown(source: &str) -> String {
+    let mut options = Options::empty();
+    options.insert(Options::ENABLE_STRIKETHROUGH);
+    options.insert(Options::ENABLE_TABLES);
+
+    let parser = Parser::new_ext(source, options);
+    let bundle = syntect();
+    // InspiredGitHub is a light theme that ships with syntect defaults.
+    // A proper Gruvbox-light theme swap is a follow-up (spec notes it).
+    let theme = &bundle.theme_set.themes["InspiredGitHub"];
+
+    let mut html_out = String::new();
+    let mut in_code_block: Option<Option<String>> = None;
+    let mut code_buffer = String::new();
+    let mut events: Vec<Event> = Vec::new();
+
+    for event in parser {
+        match event {
+            Event::Start(Tag::CodeBlock(CodeBlockKind::Fenced(ref lang))) => {
+                in_code_block = Some(if lang.is_empty() { None } else { Some(lang.to_string()) });
+                code_buffer.clear();
+            }
+            Event::End(TagEnd::CodeBlock) => {
+                if let Some(lang_opt) = in_code_block.take() {
+                    let syntax = lang_opt
+                        .as_deref()
+                        .and_then(|l| bundle.syntax_set.find_syntax_by_token(l))
+                        .unwrap_or_else(|| bundle.syntax_set.find_syntax_plain_text());
+                    let mut highlighter = HighlightLines::new(syntax, theme);
+                    let mut highlighted = String::from("<pre class=\"code-block\"><code>");
+                    for line in code_buffer.lines() {
+                        let regions = highlighter
+                            .highlight_line(line, &bundle.syntax_set)
+                            .unwrap_or_default();
+                        let line_html = styled_line_to_highlighted_html(
+                            &regions[..],
+                            IncludeBackground::No,
+                        )
+                        .unwrap_or_else(|_| line.to_string());
+                        highlighted.push_str(&line_html);
+                        highlighted.push('\n');
+                    }
+                    highlighted.push_str("</code></pre>");
+                    events.push(Event::Html(highlighted.into()));
+                }
+            }
+            Event::Text(text) if in_code_block.is_some() => {
+                code_buffer.push_str(&text);
+            }
+            other => {
+                if in_code_block.is_none() {
+                    events.push(other);
+                }
+            }
+        }
+    }
+
+    pulldown_cmark::html::push_html(&mut html_out, events.into_iter());
+    html_out
 }
 
 #[cfg(test)]
@@ -111,5 +191,30 @@ mod tests {
         // Body must not start with a stray \r from the closing fence.
         assert!(!body.starts_with('\r'));
         assert_eq!(body, "Body text.\r\n");
+    }
+
+    #[test]
+    fn render_markdown_produces_html_paragraph() {
+        let html = render_markdown("Hello **world**");
+        assert!(html.contains("<p>"));
+        assert!(html.contains("<strong>world</strong>"));
+    }
+
+    #[test]
+    fn render_markdown_highlights_rust_code_blocks() {
+        let md = "```rust\nfn main() {}\n```";
+        let html = render_markdown(md);
+        // syntect wraps tokens in <span> with inline styles
+        assert!(html.contains("<span"));
+        assert!(html.contains("fn"));
+        assert!(html.contains("main"));
+    }
+
+    #[test]
+    fn render_markdown_leaves_plain_code_blocks_as_pre() {
+        let md = "```\nplain text\n```";
+        let html = render_markdown(md);
+        assert!(html.contains("<pre"));
+        assert!(html.contains("plain text"));
     }
 }
