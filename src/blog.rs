@@ -46,7 +46,11 @@ impl AppState {
     /// Returns the `n` most recent posts.
     #[must_use]
     pub fn latest(&self, n: usize) -> Vec<&Post> {
-        self.all().into_iter().take(n).collect()
+        self.slugs_newest_first
+            .iter()
+            .filter_map(|s| self.posts_by_slug.get(s))
+            .take(n)
+            .collect()
     }
 }
 

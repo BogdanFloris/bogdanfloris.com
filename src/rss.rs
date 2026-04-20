@@ -28,7 +28,7 @@ pub fn build_feed(posts: &[&Post]) -> String {
             .unwrap_or_default();
         push_tag(&mut out, "pubDate", &pub_date);
         out.push_str("<description><![CDATA[");
-        out.push_str(&post.rendered_html);
+        cdata_escape(&post.rendered_html, &mut out);
         out.push_str("]]></description>\n");
         out.push_str("</item>\n");
     }
@@ -45,6 +45,19 @@ fn push_tag(out: &mut String, name: &str, value: &str) {
     out.push_str("</");
     out.push_str(name);
     out.push_str(">\n");
+}
+
+fn cdata_escape(input: &str, out: &mut String) {
+    // Split on `]]>` and re-open CDATA around the close-marker to keep one
+    // logical CDATA section from being terminated early.
+    let mut first = true;
+    for chunk in input.split("]]>") {
+        if !first {
+            out.push_str("]]]]><![CDATA[>");
+        }
+        out.push_str(chunk);
+        first = false;
+    }
 }
 
 fn xml_escape(input: &str, out: &mut String) {
@@ -109,5 +122,18 @@ mod tests {
         let xml = build_feed(&refs);
         assert!(xml.contains("A &amp; B &lt;c&gt;"));
         assert!(!xml.contains("A & B <c>"));
+    }
+
+    #[test]
+    fn build_feed_handles_cdata_terminator_in_body() {
+        let mut post = sample_post("T", "t", "2025-01-01");
+        post.rendered_html = "before ]]> after".to_string();
+        let refs: Vec<&Post> = [&post].to_vec();
+        let xml = build_feed(&refs);
+        // The literal terminator must not appear inside the single logical CDATA section;
+        // the split should have turned it into `]]]]><![CDATA[>`.
+        assert!(xml.contains("]]]]><![CDATA[>"));
+        assert!(xml.contains("before "));
+        assert!(xml.contains(" after"));
     }
 }
