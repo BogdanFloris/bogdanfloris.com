@@ -135,6 +135,72 @@ pub fn render_markdown(source: &str) -> String {
     html_out
 }
 
+#[derive(Debug, Clone)]
+pub struct Post {
+    pub title: String,
+    pub slug: String,
+    pub date: NaiveDate,
+    pub tags: Vec<String>,
+    pub rendered_html: String,
+    pub draft: bool,
+}
+
+/// Reads every `*.md` file in `dir`, parses frontmatter, renders the body,
+/// and returns posts sorted newest-first. Drafts are included iff `include_drafts` is true.
+/// Errors on individual files are logged via `tracing::warn!` and the file is skipped.
+pub fn load_posts(dir: &std::path::Path, include_drafts: bool) -> Vec<Post> {
+    let mut posts = Vec::new();
+    let read = match std::fs::read_dir(dir) {
+        Ok(r) => r,
+        Err(e) => {
+            tracing::warn!("cannot read posts dir {:?}: {}", dir, e);
+            return posts;
+        }
+    };
+    for entry in read.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|s| s.to_str()) != Some("md") {
+            continue;
+        }
+        let source = match std::fs::read_to_string(&path) {
+            Ok(s) => s,
+            Err(e) => {
+                tracing::warn!("skipping {:?}: {}", path, e);
+                continue;
+            }
+        };
+        let (fm_yaml, body) = match split_frontmatter(&source) {
+            Ok(pair) => pair,
+            Err(e) => {
+                tracing::warn!("frontmatter error in {:?}: {}", path, e);
+                continue;
+            }
+        };
+        let fm: Frontmatter = match serde_yaml::from_str(fm_yaml) {
+            Ok(fm) => fm,
+            Err(e) => {
+                tracing::warn!("yaml error in {:?}: {}", path, e);
+                continue;
+            }
+        };
+        if fm.draft && !include_drafts {
+            continue;
+        }
+        let slug = fm.slug.clone().unwrap_or_else(|| derive_slug(&fm.title));
+        let rendered = render_markdown(body);
+        posts.push(Post {
+            title: fm.title,
+            slug,
+            date: fm.date,
+            tags: fm.tags,
+            rendered_html: rendered,
+            draft: fm.draft,
+        });
+    }
+    posts.sort_by(|a, b| b.date.cmp(&a.date));
+    posts
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -224,5 +290,61 @@ mod tests {
         let html = render_markdown("```xyzzy\nsome code\n```");
         assert!(html.contains("<pre"));
         assert!(html.contains("some code"));
+    }
+
+    #[test]
+    fn load_posts_reads_a_directory_of_markdown_files() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(
+            tmp.path().join("a.md"),
+            "---\ntitle: First\ndate: 2025-01-10\ntags: [rust]\n---\nHello.\n",
+        )
+        .unwrap();
+        std::fs::write(
+            tmp.path().join("b.md"),
+            "---\ntitle: Second\ndate: 2025-02-20\n---\nWorld.\n",
+        )
+        .unwrap();
+
+        let posts = load_posts(tmp.path(), false);
+        assert_eq!(posts.len(), 2);
+        assert_eq!(posts[0].title, "Second");
+        assert_eq!(posts[1].title, "First");
+        assert_eq!(posts[1].slug, "first");
+        assert!(posts[0].rendered_html.contains("<p>World."));
+    }
+
+    #[test]
+    fn load_posts_excludes_drafts_by_default() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(
+            tmp.path().join("draft.md"),
+            "---\ntitle: Draft\ndate: 2025-05-01\ndraft: true\n---\nWIP.\n",
+        )
+        .unwrap();
+        std::fs::write(
+            tmp.path().join("real.md"),
+            "---\ntitle: Real\ndate: 2025-05-01\n---\nBody.\n",
+        )
+        .unwrap();
+
+        let without = load_posts(tmp.path(), false);
+        assert_eq!(without.len(), 1);
+        assert_eq!(without[0].title, "Real");
+
+        let with = load_posts(tmp.path(), true);
+        assert_eq!(with.len(), 2);
+    }
+
+    #[test]
+    fn load_posts_uses_explicit_slug_when_provided() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(
+            tmp.path().join("custom.md"),
+            "---\ntitle: A Very Long Title\nslug: short\ndate: 2025-01-01\n---\nBody.\n",
+        )
+        .unwrap();
+        let posts = load_posts(tmp.path(), false);
+        assert_eq!(posts[0].slug, "short");
     }
 }

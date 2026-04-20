@@ -32,3 +32,6 @@ path = "src/blog.rs"
 [[bin]]
 name = "bogdanfloris-com"
 path = "src/main.rs"
+
+[dev-dependencies]
+tempfile = "3.27.0"
