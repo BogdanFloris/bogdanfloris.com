@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 {% block title %}{{ meta.page_title }}{% endblock %}
 {% block body %}
-{% include "partials/theme-button.html" %}
-<div class="min-h-screen px-4 sm:px-6 py-16">
-    <div class="max-w-2xl mx-auto">
-        {% include "partials/banner.html" %}
-        {% include "partials/nav.html" %}
-        {% include "partials/resume-body.html" %}
-    </div>
-</div>
+<main class="max-w-[680px] mx-auto px-6 py-16">
+  {% include "partials/letterhead.html" %}
+  {% include "partials/nav.html" %}
+  <article class="article">
+    {% include "partials/resume-body.html" %}
+  </article>
+  {% include "partials/footer.html" %}
+</main>
 {% endblock %}

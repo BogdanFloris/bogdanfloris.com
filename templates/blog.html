@@ -1,25 +1,29 @@
 {% extends "base.html" %}
 {% block title %}{{ meta.page_title }}{% endblock %}
 {% block body %}
-    {% include "partials/theme-button.html" %}
-    <div class="min-h-screen px-4 sm:px-6 py-16">
-        <div class="max-w-2xl mx-auto">
-            {% include "partials/banner.html" %}
-            {% include "partials/nav.html" %}
-            <div class="bg-bg-h-light dark:bg-bg-h-dark border-fg-light dark:border-fg-dark border-1-5 px-6 sm:px-8 py-8 mb-12">
-                <h1 class="h1 text-center mb-6">Blog</h1>
-                <p class="body-text mb-6">
-                    This is the start of my personal blog. I'll write here if I find anything interesting to write and
-                    inspiration hits.
-                </p>
-                <ul class="space-y-3">
-                    {% for post in posts %}
-                    <li>
-                        <a class="link" href="/post/{{ post.slug }}">{{ post.title }}</a> - <span class="text-gray-light dark:text-gray-dark">{{ post.date }}</span>
-                    </li>
-                    {% endfor %}
-                </ul>
-            </div>
-        </div>
-    </div>
+<main class="max-w-[680px] mx-auto px-6 py-16">
+  {% include "partials/letterhead.html" %}
+  {% include "partials/nav.html" %}
+
+  <section class="mb-12">
+    <h1 class="h1 mb-6">writing</h1>
+    {% if posts.is_empty() %}
+    <p class="body-text text-fg-3">Nothing here yet. Soon.</p>
+    {% else %}
+    <ul class="post-list">
+      {% for post in posts %}
+      <li class="post-row">
+        <span class="date">{{ post.date }}</span>
+        <span class="title"><a href="/post/{{ post.slug }}">{{ post.title }}</a></span>
+        <span class="tags">
+          {% for tag in post.tags %}{% if !loop.first %} · {% endif %}{{ tag }}{% endfor %}
+        </span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </section>
+
+  {% include "partials/footer.html" %}
+</main>
 {% endblock %}

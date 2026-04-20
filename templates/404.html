@@ -1,18 +1,14 @@
 {% extends "base.html" %}
 {% block title %}{{ meta.page_title }}{% endblock %}
 {% block body %}
-    {% include "partials/theme-button.html" %}
-    <div class="min-h-screen px-4 sm:px-6 py-16">
-        <div class="max-w-2xl mx-auto">
-            {% include "partials/banner.html" %}
-            {% include "partials/nav.html" %}
-            <div class="bg-bg-h-light dark:bg-bg-h-dark border-fg-light dark:border-fg-dark border-1-5 px-6 sm:px-8 py-8 mb-12">
-                <h3 class="h2 text-center font-sans mb-0">
-                    Haven't had time to build this page yet.
-                    <br>
-                    Check back soon!
-                </h3>
-            </div>
-        </div>
-    </div>
+<main class="max-w-[680px] mx-auto px-6 py-16">
+  {% include "partials/letterhead.html" %}
+  {% include "partials/nav.html" %}
+  <section class="my-20 text-center">
+    <h1 class="h1 mb-4">not found</h1>
+    <p class="body-text text-fg-3">The page you're looking for doesn't exist.</p>
+    <p class="mt-6"><a class="link font-mono" href="/">← home</a></p>
+  </section>
+  {% include "partials/footer.html" %}
+</main>
 {% endblock %}

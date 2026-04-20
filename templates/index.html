@@ -1,39 +1,38 @@
 {% extends "base.html" %}
 {% block title %}{{ meta.page_title }}{% endblock %}
 {% block body %}
-    {% include "partials/theme-button.html" %}
-    <div class="min-h-screen px-4 sm:px-6 py-16">
-        <div class="max-w-2xl mx-auto">
-            {% include "partials/banner.html" %}
-            {% include "partials/nav.html" %}
-            <div class="bg-bg-h-light dark:bg-bg-h-dark border-fg-light dark:border-fg-dark border-1-5 px-6 sm:px-8 py-8 mb-12">
-                <h2 class="font-mono h2 mb-6 text-center">whoami</h2>
-                <p class="body-text mb-8">
-                    I'm Bogdan, a software engineer with 6 YOE at <a class="link" href="https://datacamp.com">DataCamp</a>, previously at <a class="link" href="https://www.bloomberg.com/engineering">Bloomberg LP</a>. I most often enjoy working on backend systems, but I also like to dabble in frontend development and data science. I'm also a very avid skier and love playing the acoustic guitar.
-                </p>
-                <h2 class="font-mono h2 mb-6 text-center">whereis</h2>
-                <p class="font-mono text-sm mb-8">
-                    email&nbsp;&nbsp;&nbsp;&nbsp;->&nbsp;<a class="link" href="mailto:bogdan.floris@gmail.com">bogdan.floris@gmail.com</a>
-                    <br>
-                    github&nbsp;&nbsp;&nbsp;->&nbsp;<a class="link" href="https://github.com/BogdanFloris">BogdanFloris</a>
-                    <br>
-                    linkedin&nbsp;->&nbsp;<a class="link" href="https://www.linkedin.com/in/bogdan-floris">bogdan-floris</a>
-                    <br>
-                    x&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;->&nbsp;<a class="link" href="https://x.com/@bogdan_floris">@bogdan_floris</a>
-                    <br>
-                    location&nbsp;->&nbsp;Bucharest/Romania
-                </p>
-                {% if !recent.is_empty() %}
-                <h2 class="font-mono h2 mb-6 text-center">recent</h2>
-                <ul class="space-y-3">
-                    {% for post in recent %}
-                    <li>
-                        <a class="link" href="/post/{{ post.slug }}">{{ post.title }}</a> - <span class="text-gray-light dark:text-gray-dark">{{ post.date }}</span>
-                    </li>
-                    {% endfor %}
-                </ul>
-                {% endif %}
-            </div>
-        </div>
-    </div>
+<main class="max-w-[680px] mx-auto px-6 py-16">
+  {% include "partials/letterhead.html" %}
+  {% include "partials/nav.html" %}
+
+  <section class="mb-12 body-text">
+    <p class="mb-4">
+      I'm Bogdan, a software engineer in Bucharest with six years of experience. I currently work at <a class="link" href="https://datacamp.com">DataCamp</a> on the Content Platform team, enabling new languages and building tooling around course authoring.
+    </p>
+    <p class="mb-4">
+      Before that I worked at <a class="link" href="https://www.bloomberg.com/engineering">Bloomberg</a> in London on the MARS risk platform. I write here mostly about Rust, systems, and the occasional side quest.
+    </p>
+    <p class="mb-4"><a class="link" href="/about">More about me →</a></p>
+  </section>
+
+  {% if !recent.is_empty() %}
+  <section class="mb-12">
+    <h2 class="font-mono text-sm text-orange uppercase tracking-wider mb-4">recent</h2>
+    <ul class="post-list">
+      {% for post in recent %}
+      <li class="post-row">
+        <span class="date">{{ post.date }}</span>
+        <span class="title"><a href="/post/{{ post.slug }}">{{ post.title }}</a></span>
+        <span class="tags">
+          {% for tag in post.tags %}{% if !loop.first %} · {% endif %}{{ tag }}{% endfor %}
+        </span>
+      </li>
+      {% endfor %}
+    </ul>
+    <p class="mt-4"><a class="link font-mono text-sm" href="/blog">all posts →</a></p>
+  </section>
+  {% endif %}
+
+  {% include "partials/footer.html" %}
+</main>
 {% endblock %}

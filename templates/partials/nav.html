@@ -1,11 +1,9 @@
-<div class="mt-6 mb-12 text-center">
-    <a class="link" href="/">home</a>
-    |
-    <a class="link" href="/about">about</a>
-    |
-    <a class="link" href="/blog">blog</a>
-    |
-    <a class="link" href="/projects">projects</a>
-    |
-    <a class="link" href="/resume">resume</a>
-</div>
+<nav class="site-nav">
+  <a href="/"{% if meta.path == "/" %} class="active"{% endif %}>home</a>
+  <span class="sep">·</span>
+  <a href="/about"{% if meta.path == "/about" %} class="active"{% endif %}>about</a>
+  <span class="sep">·</span>
+  <a href="/blog"{% if meta.path.starts_with("/blog") || meta.path.starts_with("/post") %} class="active"{% endif %}>blog</a>
+  <span class="sep">·</span>
+  <a href="/resume"{% if meta.path == "/resume" %} class="active"{% endif %}>resume</a>
+</nav>

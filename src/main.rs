@@ -1,5 +1,5 @@
 use askama_axum::Template;
-use axum::http::Uri;
+use axum::http::{StatusCode, Uri};
 use axum::routing::get;
 use axum::{extract::State, Router};
 use clap::Parser;
@@ -114,13 +114,13 @@ async fn resume(uri: Uri) -> Resume {
     Resume { meta }
 }
 
-async fn not_found(uri: Uri) -> NotFound {
+async fn not_found(uri: Uri) -> (StatusCode, NotFound) {
     let meta = PageMeta {
         page_title: "not found | bogdan floris".to_string(),
         banner_title: "not found".to_string(),
         path: uri.to_string(),
     };
-    NotFound { meta }
+    (StatusCode::NOT_FOUND, NotFound { meta })
 }
 
 async fn rss(State(state): State<AppState>) -> impl axum::response::IntoResponse {
