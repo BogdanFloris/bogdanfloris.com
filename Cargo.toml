@@ -6,17 +6,17 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-askama = {version = "0.12.0", features = ["with-axum"] }
-askama_axum = "0.3.0"
-axum = { version = "0.6.18", features = ["macros"]}
+askama = { version = "0.12.1", features = ["with-axum"] }
+askama_axum = "0.4.0"
+axum = { version = "0.7.9", features = ["macros"] }
 cargo-watch = "8.4.0"
 chrono = "0.4.38"
 clap = { version = "4.5.40", features = ["derive"] }
-serde = { version = "1.0.167", features = ["derive"] }
-tokio = { version = "1.29.1", features = ["full"] }
-tower-http = { version = "0.4.1", features = ["fs"] }
-tracing = "0.1.37"
-tracing-subscriber = "0.3.17"
+serde = { version = "1.0.219", features = ["derive"] }
+tokio = { version = "1.44.2", features = ["full"] }
+tower-http = { version = "0.5.2", features = ["fs"] }
+tracing = "0.1.41"
+tracing-subscriber = "0.3.19"
 
 [profile.release]
 debug = true
