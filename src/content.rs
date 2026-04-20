@@ -157,7 +157,14 @@ pub fn load_posts(dir: &std::path::Path, include_drafts: bool) -> Vec<Post> {
             return posts;
         }
     };
-    for entry in read.flatten() {
+    for entry in read {
+        let entry = match entry {
+            Ok(e) => e,
+            Err(e) => {
+                tracing::warn!("skipping dir entry in {:?}: {}", dir, e);
+                continue;
+            }
+        };
         let path = entry.path();
         if path.extension().and_then(|s| s.to_str()) != Some("md") {
             continue;
