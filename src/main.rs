@@ -8,7 +8,7 @@ use std::path::PathBuf;
 use tower_http::services::ServeDir;
 
 use blog::content::load_posts;
-use blog::{format_date, post, AppState, PageMeta};
+use blog::{compute_css_version, format_date, post, AppState, PageMeta};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -30,7 +30,9 @@ async fn main() {
 
     let posts = load_posts(&args.posts_dir, args.drafts);
     tracing::info!("loaded {} post(s) from {:?}", posts.len(), args.posts_dir);
-    let state = AppState::from_posts(posts);
+    let css_version = compute_css_version(std::path::Path::new("./dist/css/output.css"));
+    tracing::info!("css version {}", css_version);
+    let state = AppState::from_posts(posts).with_css_version(css_version);
 
     let dist_service = ServeDir::new("./dist");
 
@@ -42,8 +44,8 @@ async fn main() {
         .route("/post/:slug", get(post))
         .route("/resume", get(resume))
         .route("/rss.xml", get(rss))
-        .with_state(state)
-        .fallback(not_found);
+        .fallback(not_found)
+        .with_state(state);
 
     let ip_addr: IpAddr = args.host.parse().expect("invalid host");
     let addr = SocketAddr::from((ip_addr, args.port));
@@ -60,6 +62,7 @@ async fn home(uri: Uri, State(state): State<AppState>) -> Home {
         page_title: "bogdan floris".to_string(),
         banner_title: "bogdan floris".to_string(),
         path: uri.to_string(),
+        css_version: state.css_version.clone(),
     };
     let recent: Vec<RecentPost> = state
         .latest(3)
@@ -74,11 +77,12 @@ async fn home(uri: Uri, State(state): State<AppState>) -> Home {
     Home { meta, recent }
 }
 
-async fn about(uri: Uri) -> About {
+async fn about(uri: Uri, State(state): State<AppState>) -> About {
     let meta = PageMeta {
         page_title: "about | bogdan floris".to_string(),
         banner_title: "about".to_string(),
         path: uri.to_string(),
+        css_version: state.css_version.clone(),
     };
     About { meta }
 }
@@ -88,6 +92,7 @@ async fn blog_index(uri: Uri, State(state): State<AppState>) -> BlogIndex {
         page_title: "blog | bogdan floris".to_string(),
         banner_title: "blog".to_string(),
         path: uri.to_string(),
+        css_version: state.css_version.clone(),
     };
     let posts: Vec<RecentPost> = state
         .all()
@@ -102,20 +107,22 @@ async fn blog_index(uri: Uri, State(state): State<AppState>) -> BlogIndex {
     BlogIndex { meta, posts }
 }
 
-async fn resume(uri: Uri) -> Resume {
+async fn resume(uri: Uri, State(state): State<AppState>) -> Resume {
     let meta = PageMeta {
         page_title: "resume | bogdan floris".to_string(),
         banner_title: "resume".to_string(),
         path: uri.to_string(),
+        css_version: state.css_version.clone(),
     };
     Resume { meta }
 }
 
-async fn not_found(uri: Uri) -> (StatusCode, NotFound) {
+async fn not_found(uri: Uri, State(state): State<AppState>) -> (StatusCode, NotFound) {
     let meta = PageMeta {
         page_title: "not found | bogdan floris".to_string(),
         banner_title: "not found".to_string(),
         path: uri.to_string(),
+        css_version: state.css_version.clone(),
     };
     (StatusCode::NOT_FOUND, NotFound { meta })
 }
