@@ -2,3 +2,4 @@
 /.idea
 .direnv/
 .superpowers/
+/node_modules
