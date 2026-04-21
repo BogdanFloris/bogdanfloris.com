@@ -1613,7 +1613,6 @@ Next task rewrites page templates to use letterhead + footer.
       email &middot; <a class="link" href="mailto:bogdan.floris@gmail.com">bogdan.floris@gmail.com</a><br />
       github &middot; <a class="link" href="https://github.com/BogdanFloris">BogdanFloris</a><br />
       linkedin &middot; <a class="link" href="https://www.linkedin.com/in/bogdan-floris">bogdan-floris</a><br />
-      x &middot; <a class="link" href="https://x.com/@bogdan_floris">@bogdan_floris</a>
     </p>
   </article>
 
