@@ -39,7 +39,6 @@ async fn main() {
     let app = Router::new()
         .nest_service("/dist", dist_service)
         .route("/", get(home))
-        .route("/about", get(about))
         .route("/blog", get(blog_index))
         .route("/post/:slug", get(post))
         .route("/resume", get(resume))
@@ -75,16 +74,6 @@ async fn home(uri: Uri, State(state): State<AppState>) -> Home {
         })
         .collect();
     Home { meta, recent }
-}
-
-async fn about(uri: Uri, State(state): State<AppState>) -> About {
-    let meta = PageMeta {
-        page_title: "about | bogdan floris".to_string(),
-        banner_title: "about".to_string(),
-        path: uri.to_string(),
-        css_version: state.css_version.clone(),
-    };
-    About { meta }
 }
 
 async fn blog_index(uri: Uri, State(state): State<AppState>) -> BlogIndex {
@@ -151,12 +140,6 @@ pub struct RecentPost {
 struct Home {
     meta: PageMeta,
     recent: Vec<RecentPost>,
-}
-
-#[derive(Template)]
-#[template(path = "about.html")]
-struct About {
-    meta: PageMeta,
 }
 
 #[derive(Template)]

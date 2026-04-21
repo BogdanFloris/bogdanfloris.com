@@ -1,8 +1,6 @@
 <nav class="site-nav">
   <a href="/"{% if meta.path == "/" %} class="active"{% endif %}>home</a>
   <span class="sep">·</span>
-  <a href="/about"{% if meta.path == "/about" %} class="active"{% endif %}>about</a>
-  <span class="sep">·</span>
   <a href="/blog"{% if meta.path.starts_with("/blog") || meta.path.starts_with("/post") %} class="active"{% endif %}>blog</a>
   <span class="sep">·</span>
   <a href="/resume"{% if meta.path == "/resume" %} class="active"{% endif %}>resume</a>
