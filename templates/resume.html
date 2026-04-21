@@ -4,9 +4,70 @@
 <main class="max-w-[680px] mx-auto px-6 py-16">
   {% include "partials/letterhead.html" %}
   {% include "partials/nav.html" %}
-  <article class="article">
-    {% include "partials/resume-body.html" %}
-  </article>
+
+  <section class="mb-12">
+    <h2 class="font-mono text-sm text-orange uppercase tracking-wider mb-6">experience</h2>
+
+    <div class="mb-10">
+      <div class="font-mono text-sm text-fg-4 mb-1">2026-01 — present · Bucharest</div>
+      <div class="font-semibold mb-3">Google — Software Engineer <a class="text-fg-3 hover:text-orange no-underline ml-1" href="https://about.google">↗</a></div>
+      <div class="body-text">
+        <p class="mb-4">At Google, I work on the Android Windowing Tools team. My focus is tracing infrastructure for the Android platform — building and maintaining Perfetto-based instrumentation across core Android components so that platform and app developers can reason about rendering, layout, and window lifecycle behavior.</p>
+        <p class="mb-4">I also contribute to Flicker lib, a test framework for verifying window and layer transitions, and Winscope, a tool for inspecting and debugging window and surface traces across Android devices.</p>
+      </div>
+    </div>
+
+    <div class="mb-10">
+      <div class="font-mono text-sm text-fg-4 mb-1">2022-04 — 2025-12 · Remote</div>
+      <div class="font-semibold mb-3">DataCamp — Senior Software Engineer <a class="text-fg-3 hover:text-orange no-underline ml-1" href="https://datacamp.com">↗</a></div>
+      <div class="body-text">
+        <p class="mb-4">At DataCamp, an online learning platform, I was part of the Content Platform team, working on enabling new technologies in the platform (anything a course can be built in, e.g. Python, SQL, Azure, PowerBI) and maintaining the Teach platform used by content developers to author courses.</p>
+        <p class="mb-4">I led the development on enabling multiple technologies — Java, Rust, Julia, AWS — which involved building a code execution engine and creating an AST-based DSL used to check user submissions.</p>
+        <p class="mb-4">I also led the engineering effort to improve the platform and the learning experience using generative AI, adding a teaching assistant that helps students debug their code, provides hints, and explains solutions to exercises.</p>
+      </div>
+    </div>
+
+    <div class="mb-10">
+      <div class="font-mono text-sm text-fg-4 mb-1">2020-10 — 2022-03 · London</div>
+      <div class="font-semibold mb-3">Bloomberg — Software Engineer <a class="text-fg-3 hover:text-orange no-underline ml-1" href="https://www.bloomberg.com/professional/products/risk/mars/">↗</a></div>
+      <div class="body-text">
+        <p class="mb-4">At Bloomberg, I was part of the MARS Market Risk team, which provides a suite of risk management tools used by clients to manage their portfolios.</p>
+        <p class="mb-4">My work there involved developing and maintaining features in a C++ distributed systems architecture that prices financial data and computes risk metrics. I led the development on a new A/B testing framework and worked with finance specialists to improve the FRTB solution of the team.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="mb-12">
+    <h2 class="font-mono text-sm text-orange uppercase tracking-wider mb-6">education</h2>
+
+    <div class="mb-6">
+      <div class="font-mono text-sm text-fg-4 mb-1">2018 — 2020 · Netherlands</div>
+      <div>University of Amsterdam — MSc Artificial Intelligence</div>
+    </div>
+
+    <div class="mb-6">
+      <div class="font-mono text-sm text-fg-4 mb-1">2015 — 2018 · Netherlands</div>
+      <div>Eindhoven University of Technology — BSc Computer Science and Engineering</div>
+    </div>
+  </section>
+
+  <section class="mb-12">
+    <h2 class="font-mono text-sm text-orange uppercase tracking-wider mb-6">skills</h2>
+    <dl class="grid grid-cols-[max-content_1fr] gap-y-2 gap-x-6 font-mono text-sm">
+      <dt class="text-fg-4">languages</dt>
+      <dd>C++, Kotlin, Java, TypeScript, Python, Rust, Go, Zig, Ruby</dd>
+
+      <dt class="text-fg-4">systems &amp; tracing</dt>
+      <dd>Perfetto, Android (SurfaceFlinger, WindowManager, Skia), Linux perf tools</dd>
+
+      <dt class="text-fg-4">web</dt>
+      <dd>React, HTMX, Tailwind</dd>
+
+      <dt class="text-fg-4">infrastructure</dt>
+      <dd>PostgreSQL, Cassandra, Kafka, Docker, Kubernetes</dd>
+    </dl>
+  </section>
+
   {% include "partials/footer.html" %}
 </main>
 {% endblock %}
