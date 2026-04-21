@@ -19,9 +19,13 @@ pub struct Frontmatter {
     pub draft: bool,
 }
 
-/// Splits a markdown file's contents into (frontmatter_yaml, body_markdown).
+/// Splits a markdown file's contents into (`frontmatter_yaml`, `body_markdown`).
 /// The frontmatter is delimited by `---` on its own line at the start of the file
 /// and a closing `---` on its own line.
+///
+/// # Errors
+///
+/// Returns an error when either fence is missing.
 pub fn split_frontmatter(source: &str) -> Result<(&str, &str), String> {
     let rest = source
         .strip_prefix("---\n")
@@ -40,6 +44,7 @@ pub fn split_frontmatter(source: &str) -> Result<(&str, &str), String> {
 /// Derives a url-safe kebab-case slug from a post title.
 /// Strips non-alphanumerics (except spaces and hyphens), lowercases, and
 /// collapses runs of whitespace/dashes into single hyphens.
+#[must_use]
 pub fn derive_slug(title: &str) -> String {
     let mut slug = String::with_capacity(title.len());
     let mut prev_dash = true;
@@ -73,6 +78,7 @@ fn syntect() -> &'static SyntectBundle {
     })
 }
 
+#[must_use]
 pub fn render_markdown(source: &str) -> String {
     let mut options = Options::empty();
     options.insert(Options::ENABLE_STRIKETHROUGH);
@@ -106,7 +112,7 @@ pub fn render_markdown(source: &str) -> String {
                         .and_then(|l| bundle.syntax_set.find_syntax_by_token(l))
                         .unwrap_or_else(|| bundle.syntax_set.find_syntax_plain_text());
                     let mut highlighter = HighlightLines::new(syntax, theme);
-                    let mut highlighted = String::from("<pre class=\"code-block\"><code>");
+                    let mut block_html = String::from("<pre class=\"code-block\"><code>");
                     for line in code_buffer.lines() {
                         let regions = highlighter
                             .highlight_line(line, &bundle.syntax_set)
@@ -114,11 +120,11 @@ pub fn render_markdown(source: &str) -> String {
                         let line_html =
                             styled_line_to_highlighted_html(&regions[..], IncludeBackground::No)
                                 .unwrap_or_else(|_| line.to_string());
-                        highlighted.push_str(&line_html);
-                        highlighted.push('\n');
+                        block_html.push_str(&line_html);
+                        block_html.push('\n');
                     }
-                    highlighted.push_str("</code></pre>");
-                    events.push(Event::Html(highlighted.into()));
+                    block_html.push_str("</code></pre>");
+                    events.push(Event::Html(block_html.into()));
                 }
             }
             Event::Text(text) if in_code_block.is_some() => {

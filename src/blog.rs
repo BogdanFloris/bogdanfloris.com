@@ -63,6 +63,7 @@ pub struct PageMeta {
     pub path: String,
 }
 
+#[must_use]
 pub fn format_date(date: &NaiveDate) -> String {
     date.format("%Y-%m-%d").to_string()
 }
@@ -77,6 +78,7 @@ pub struct PostTemplate {
     pub rendered_html: String,
 }
 
+#[allow(clippy::unused_async)]
 pub async fn post(
     Path(slug): Path<String>,
     State(state): State<AppState>,

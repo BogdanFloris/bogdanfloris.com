@@ -5,6 +5,7 @@ const SITE_TITLE: &str = "bogdan floris";
 const SITE_DESCRIPTION: &str = "Notes on software, systems, and side quests.";
 
 /// Renders an RSS 2.0 feed for the given posts.
+#[must_use]
 pub fn build_feed(posts: &[&Post]) -> String {
     let mut out = String::new();
     out.push_str("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");

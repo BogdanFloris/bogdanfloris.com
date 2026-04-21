@@ -15,15 +15,10 @@ use blog::{format_date, post, AppState, PageMeta};
 struct Args {
     #[arg(short = 'H', long, default_value = "0.0.0.0")]
     host: String,
-
     #[arg(short, long, default_value_t = 8080)]
     port: u16,
-
-    /// Include posts marked `draft: true` in the frontmatter.
     #[arg(long)]
     drafts: bool,
-
-    /// Directory containing blog post markdown files.
     #[arg(long, default_value = "./blog_posts")]
     posts_dir: PathBuf,
 }
