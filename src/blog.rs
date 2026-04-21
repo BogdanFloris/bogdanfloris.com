@@ -26,7 +26,10 @@ impl AppState {
         for post in posts {
             posts_by_slug.insert(post.slug.clone(), post);
         }
-        Self { posts_by_slug, slugs_newest_first }
+        Self {
+            posts_by_slug,
+            slugs_newest_first,
+        }
     }
 
     #[must_use]

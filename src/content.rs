@@ -92,7 +92,11 @@ pub fn render_markdown(source: &str) -> String {
     for event in parser {
         match event {
             Event::Start(Tag::CodeBlock(CodeBlockKind::Fenced(ref lang))) => {
-                in_code_block = Some(if lang.is_empty() { None } else { Some(lang.to_string()) });
+                in_code_block = Some(if lang.is_empty() {
+                    None
+                } else {
+                    Some(lang.to_string())
+                });
                 code_buffer.clear();
             }
             Event::End(TagEnd::CodeBlock) => {
@@ -107,11 +111,9 @@ pub fn render_markdown(source: &str) -> String {
                         let regions = highlighter
                             .highlight_line(line, &bundle.syntax_set)
                             .unwrap_or_default();
-                        let line_html = styled_line_to_highlighted_html(
-                            &regions[..],
-                            IncludeBackground::No,
-                        )
-                        .unwrap_or_else(|_| line.to_string());
+                        let line_html =
+                            styled_line_to_highlighted_html(&regions[..], IncludeBackground::No)
+                                .unwrap_or_else(|_| line.to_string());
                         highlighted.push_str(&line_html);
                         highlighted.push('\n');
                     }
@@ -234,12 +236,18 @@ mod tests {
 
     #[test]
     fn derive_slug_handles_normal_title() {
-        assert_eq!(derive_slug("Building a Personal Website"), "building-a-personal-website");
+        assert_eq!(
+            derive_slug("Building a Personal Website"),
+            "building-a-personal-website"
+        );
     }
 
     #[test]
     fn derive_slug_strips_punctuation() {
-        assert_eq!(derive_slug("Notes on Rust, Zig & Go!"), "notes-on-rust-zig-go");
+        assert_eq!(
+            derive_slug("Notes on Rust, Zig & Go!"),
+            "notes-on-rust-zig-go"
+        );
     }
 
     #[test]

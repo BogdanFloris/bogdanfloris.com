@@ -54,7 +54,9 @@ async fn main() {
     let addr = SocketAddr::from((ip_addr, args.port));
     tracing::info!("listening on {}", addr);
 
-    let listener = tokio::net::TcpListener::bind(addr).await.expect("bind failed");
+    let listener = tokio::net::TcpListener::bind(addr)
+        .await
+        .expect("bind failed");
     axum::serve(listener, app).await.expect("serve failed");
 }
 
@@ -126,7 +128,10 @@ async fn not_found(uri: Uri) -> (StatusCode, NotFound) {
 async fn rss(State(state): State<AppState>) -> impl axum::response::IntoResponse {
     let xml = blog::rss::build_feed(&state.all());
     (
-        [(axum::http::header::CONTENT_TYPE, "application/rss+xml; charset=utf-8")],
+        [(
+            axum::http::header::CONTENT_TYPE,
+            "application/rss+xml; charset=utf-8",
+        )],
         xml,
     )
 }
