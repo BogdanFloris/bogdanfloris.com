@@ -20,6 +20,10 @@ COPY --from=builder /usr/src/app/dist/css/output.css /app/dist/css/output.css
 COPY --from=builder /usr/src/app/dist/favicon.svg /app/dist/favicon.svg
 COPY --from=builder /usr/src/app/blog_posts /app/blog_posts
 
+USER root
+RUN chmod -R a+rX /app/dist /app/blog_posts
+USER app
+
 # Run the app
 CMD ["./bogdanfloris-com"]
 
