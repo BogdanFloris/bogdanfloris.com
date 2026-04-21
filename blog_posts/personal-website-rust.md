@@ -1,80 +1,116 @@
 ---
-title: "Building a Personal Website with Rust and Axum"
-date: 2025-06-24
-tags: [rust, web]
+title: "A Personal Website in Rust and Tailwind"
+date: 2026-04-21
+tags: [rust, web, design]
 slug: personal-website-rust
 ---
 
-I mainly use React at work, which I'm not a particularly big fan of for a multitude of reasons I won't go into much detail here. So, when choosing a stack to build my personal website in, React was out of the question. I wanted to try out Svelte because I have heard good things about it from my co-workers, but Svelte is still JavaScript frontend framework number #92321223.
+I mainly used React at work, which I'm not a particularly big fan of for a
+multitude of reasons I won't get into here. So when I went to build my
+personal website, React was out of the question. I thought about Svelte
+because my past coworkers swore by it, but Svelte is still JavaScript frontend
+framework number #92321223.
 
-So, after not so much consideration, I went with what I knew when I first started building websites, templating. But with a bit of a twist. I am learning Rust in pursuit of my goal to deepen my knowledge on systems engineering, so it seemed like a natural choice. As for why I chose Axum? ¯\_(ツ)_/¯. Reddit recommends it and it seemed simple enough. And it really is!
+Instead I went with what I already knew — templating on the server — with one
+twist: I'm learning Rust to get more comfortable with systems engineering, so
+it seemed like a natural pick for the backend. As for why Axum? ¯\_(ツ)_/¯.
+Reddit recommends it and it seemed simple enough. It really is.
 
-## Getting Started
+## The look
 
-First, let's set up a basic Axum server. You'll need to add the following dependencies to your `Cargo.toml` file:
+I took a hard look at sites I actually enjoy reading —
+[jvns.ca](https://jvns.ca) being the obvious one — and what they have in
+common is that they look like paper. Narrow reading column, serif body, mono
+metadata, and not a lot else going on.
+
+So that's what this is. A ~680px column, [Source Serif
+4](https://fonts.google.com/specimen/Source+Serif+4) for the body,
+[JetBrains Mono](https://www.jetbrains.com/lp/mono/) for dates and tags. No
+shadows, no rounded cards, no hero section. Gruvbox light, one theme. I am
+basically obsessed with Gruvbox, I run it on everything, so it seemed natural
+to use it here too.
+
+## The stack
 
 ```toml
 [dependencies]
 axum = "0.7"
+askama = "0.12"
 tokio = { version = "1", features = ["full"] }
-tower = "0.4"
+tower-http = { version = "0.5", features = ["fs"] }
+pulldown-cmark = "0.13"
+syntect = "5"
+serde_yaml = "0.9"
+chrono = { version = "0.4", features = ["serde"] }
 ```
 
-## Creating the Server
-
-Seems simple enough:
-
-- define some paths on the router
-- get a host and a port on which to run this bad boy on
-- launch the server
+Axum for routing, Askama for compile-time checked templates, Tailwind v4 for
+styling. The whole site is a single Rust binary plus a static `dist/` folder
+for CSS and images.
 
 ```rust
-use axum::{Router, routing::get};
+let app = Router::new()
+    .nest_service("/dist", ServeDir::new("./dist"))
+    .route("/", get(home))
+    .route("/blog", get(blog_index))
+    .route("/post/:slug", get(post))
+    .route("/rss.xml", get(rss))
+    .with_state(state)
+    .fallback(not_found);
+```
 
-#[tokio::main]
-async fn main() {
-    let app = Router::new()
-        .route("/", get(root))
-        .route("/about", get(about));
+## Markdown posts
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-    axum::serve(listener, app).await.unwrap();
-}
+I write posts as markdown with a small YAML frontmatter:
 
-async fn root() -> &'static str {
-    "Hello, World!"
-}
+```markdown
+---
+title: "A Personal Website in Rust and Tailwind"
+date: 2026-04-21
+tags: [rust, web, design]
+---
 
-async fn about() -> &'static str {
-    "About page"
+I mainly use React at work...
+```
+
+At startup, the server walks `blog_posts/`, parses frontmatter, runs the body
+through [pulldown-cmark](https://docs.rs/pulldown-cmark) for HTML and
+[syntect](https://docs.rs/syntect) for syntax highlighting, and stores the
+result in an `AppState`. Routes look posts up by slug.
+
+Drafts are skipped by default. Passing `--drafts` on the CLI flips a flag that
+includes `draft: true` posts — so I can run a local instance with
+works-in-progress visible without ever shipping them.
+
+## Tailwind v4
+
+The theme lives in CSS, not JavaScript:
+
+```css
+@import "tailwindcss";
+@source "../templates/**/*.html";
+
+@theme {
+  --color-bg-primary: #fbf1c7;
+  --color-fg: #282828;
+  --font-serif: "Source Serif 4", Charter, Georgia, serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
 ```
 
-### Running the Application
+The whole Gruvbox palette lives in one block, and class names like
+`bg-bg-primary` and `font-serif` come out of those variables automatically.
+One fewer config file to read.
 
-To run your application, simply use `cargo run` in your terminal. The server will start listening on port 3000.
+## RSS
 
-## Styling with Tailwind and Gruvbox
+There is an RSS feed at [/rss.xml](/rss.xml). Hand-rolled XML in about 60
+lines of Rust, which came out shorter than pulling in another dependency.
+If you still read RSS, you know what to do.
 
-For styling, I combined Tailwind CSS with the Gruvbox color scheme. I am basically obsessed with Gruvbox in general, I run it on everything, so it seemed natural to also use it for the personal website.
+## Closing thoughts
 
-## Adding Templates with Askama
+Nice weekend project with Claude.
 
-For templating, I chose Askama because it provides compile-time template checking. This means template errors are caught during compilation rather than at runtime:
-
-```rust
-use askama_axum::Template;
-
-#[derive(Template)]
-#[template(path = "index.html")]
-struct IndexTemplate {
-    title: String,
-    content: String,
-}
-```
-
-## Future Improvements
-
-I plan to add some interactivity to the website besides the small dark/light mode toggle to test "frameworks" like HTMX. I've used it in another templating projects slightly, but I want to see how far a thing like HTMX could be pushed until one needs to crawl back in React's arm.
-
-You can find the complete source code for this website on [GitHub](https://github.com/BogdanFloris/bogdanfloris.com). Feel free to use it as inspiration for your own Rust web projects!
+Source is on [GitHub](https://github.com/BogdanFloris/bogdanfloris.com).
+Steal what you like.
