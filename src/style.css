@@ -47,13 +47,16 @@ body {
 
 /* ---------- Typography ---------- */
 .h1 {
-  @apply text-3xl font-bold font-serif;
+  @apply text-3xl font-bold font-serif leading-tight;
 }
 .h2 {
-  @apply text-2xl font-bold font-serif;
+  @apply text-2xl font-bold font-serif leading-tight;
 }
 .h3 {
   @apply text-xl font-semibold font-serif;
+}
+.section-title {
+  @apply font-mono text-sm text-orange uppercase tracking-wider;
 }
 .body-text {
   @apply leading-relaxed;
@@ -63,6 +66,11 @@ body {
 .link {
   @apply text-blue hover:text-blue-dim visited:text-purple;
   @apply underline decoration-1 underline-offset-2 hover:decoration-2 transition-all duration-150;
+}
+a:focus-visible {
+  outline: 2px solid theme(--color-orange);
+  outline-offset: 3px;
+  border-radius: 1px;
 }
 
 /* ---------- Letterhead ---------- */
@@ -81,7 +89,10 @@ body {
   @apply font-mono text-sm text-fg-3 mb-12;
 }
 .site-nav a {
-  @apply text-fg-2 hover:text-orange no-underline;
+  @apply text-fg-2 hover:text-orange underline decoration-transparent underline-offset-4;
+}
+.site-nav a:hover {
+  @apply decoration-orange;
 }
 .site-nav .sep {
   @apply mx-2 text-fg-4;
@@ -111,7 +122,7 @@ body {
   @apply font-mono text-sm text-fg-4 whitespace-nowrap;
 }
 .post-row .title a {
-  @apply text-blue hover:text-blue-dim no-underline font-semibold;
+  @apply text-blue hover:text-blue-dim visited:text-purple underline decoration-1 underline-offset-2 font-semibold transition-colors duration-150;
 }
 .post-row .tags {
   @apply font-mono text-xs text-gray whitespace-nowrap;
@@ -127,7 +138,7 @@ body {
 
 /* ---------- Article ---------- */
 .article h1 {
-  @apply text-3xl font-bold font-serif mb-3;
+  @apply text-3xl font-bold font-serif leading-tight mb-3;
 }
 .article .meta {
   @apply font-mono text-sm text-fg-4 mb-10;
@@ -162,6 +173,7 @@ body {
 }
 .article pre.code-block {
   @apply bg-bg-s border border-bg-2 p-4 my-6 overflow-x-auto rounded-sm;
+  max-width: 100%;
 }
 .article pre.code-block code {
   @apply bg-transparent p-0 text-sm;
@@ -169,8 +181,27 @@ body {
 
 /* ---------- Footer ---------- */
 .site-footer {
-  @apply mt-24 pt-6 border-t border-bg-2 font-mono text-xs text-fg-4 flex justify-between;
+  @apply mt-24 pt-6 border-t border-bg-2 font-mono text-xs text-fg-4 flex justify-between gap-x-4 gap-y-3;
+  flex-wrap: wrap;
 }
 .site-footer a {
-  @apply text-fg-3 hover:text-orange no-underline;
+  @apply text-fg-3 hover:text-orange underline decoration-transparent underline-offset-2;
+}
+.site-footer a:hover {
+  @apply decoration-orange;
+}
+.resume-skills {
+  grid-template-columns: max-content minmax(0, 1fr);
+}
+@media (max-width: 480px) {
+  .resume-skills {
+    grid-template-columns: 1fr;
+    row-gap: 0.15rem;
+  }
+  .resume-skills dd {
+    margin-bottom: 0.75rem;
+  }
+  .article pre.code-block {
+    padding: 0.75rem;
+  }
 }
