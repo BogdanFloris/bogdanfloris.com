@@ -11,9 +11,30 @@ use syntect::parsing::SyntaxSet;
 /// The scribbles stream lives in this one file inside the content dir.
 pub const SCRIBBLES_FILE: &str = "scribbles.md";
 
+/// Parses the European `3-11-2026` or `3.11.2026`, and ISO `2026-11-03`.
+#[must_use]
+pub fn parse_date(s: &str) -> Option<NaiveDate> {
+    let s = s.trim();
+    ["%d-%m-%Y", "%d.%m.%Y", "%Y-%m-%d"]
+        .iter()
+        .find_map(|format| NaiveDate::parse_from_str(s, format).ok())
+}
+
+/// Dates on the site are day-first, e.g. `03-11-2026`.
+#[must_use]
+pub fn format_date(date: &NaiveDate) -> String {
+    date.format("%d-%m-%Y").to_string()
+}
+
+fn deserialize_date<'de, D: serde::Deserializer<'de>>(d: D) -> Result<NaiveDate, D::Error> {
+    let s = String::deserialize(d)?;
+    parse_date(&s).ok_or_else(|| serde::de::Error::custom(format!("unrecognised date {s:?}")))
+}
+
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct Frontmatter {
     pub title: String,
+    #[serde(deserialize_with = "deserialize_date")]
     pub date: NaiveDate,
     #[serde(default)]
     pub slug: Option<String>,
@@ -25,8 +46,8 @@ pub struct Frontmatter {
     pub updates: Vec<UpdateEntry>,
 }
 
-/// One `updates:` entry, written as `- 2026-11-01 promoted to essay` or
-/// `- 2026-11-01: promoted to essay`.
+/// One `updates:` entry, written as `- 1-11-2026 promoted to essay` or
+/// `- 1-11-2026: promoted to essay`.
 #[derive(Debug, Deserialize, PartialEq)]
 #[serde(untagged)]
 pub enum UpdateEntry {
@@ -36,36 +57,56 @@ pub enum UpdateEntry {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Update {
-    /// `YYYY-MM-DD`, or empty when the entry has no date.
-    pub date: String,
+    pub date: Option<NaiveDate>,
     pub text: String,
+}
+
+impl Update {
+    /// The date as shown on the site, or empty when the entry has none.
+    #[must_use]
+    pub fn day(&self) -> String {
+        self.date.as_ref().map(format_date).unwrap_or_default()
+    }
 }
 
 /// Flattens `updates:` entries into a list sorted by date, oldest first.
 #[must_use]
 pub fn parse_updates(entries: Vec<UpdateEntry>) -> Vec<Update> {
-    let is_date = |s: &str| NaiveDate::parse_from_str(s, "%Y-%m-%d").is_ok();
     let mut updates = Vec::new();
     for entry in entries {
         match entry {
             UpdateEntry::Line(line) => {
                 let line = line.trim();
-                let (date, text) = match line.split_once(' ') {
-                    Some((date, text)) if is_date(date) => (date, text.trim()),
-                    _ if is_date(line) => (line, ""),
-                    _ => ("", line),
+                let first = line.split_once(' ').map_or(line, |(first, _)| first);
+                let update = match parse_date(first) {
+                    Some(date) => Update {
+                        date: Some(date),
+                        text: line[first.len()..].trim().to_string(),
+                    },
+                    None => Update {
+                        date: None,
+                        text: line.to_string(),
+                    },
                 };
-                updates.push(Update {
-                    date: date.to_string(),
-                    text: text.to_string(),
-                });
+                updates.push(update);
             }
             UpdateEntry::Dated(map) => {
-                updates.extend(map.into_iter().map(|(date, text)| Update { date, text }));
+                for (key, text) in map {
+                    updates.push(match parse_date(&key) {
+                        Some(date) => Update {
+                            date: Some(date),
+                            text,
+                        },
+                        None => Update {
+                            date: None,
+                            text: format!("{key}: {text}"),
+                        },
+                    });
+                }
             }
         }
     }
-    updates.sort_by(|a, b| a.date.cmp(&b.date));
+    updates.sort_by_key(|u| u.date);
     updates
 }
 
@@ -657,20 +698,42 @@ mod tests {
 
     #[test]
     fn updates_accept_lines_and_pairs_sorted_by_date() {
-        let yaml = "title: Hi\ndate: 2026-11-03\nupdates:\n  - 2026-11-03 promoted to essay\n  - 2026-10-25: first draft\n  - tightened the argument\n";
+        let yaml = "title: Hi\ndate: 3-11-2026\nupdates:\n  - 3-11-2026 promoted to essay\n  - 2026-10-25: first draft\n  - tightened the argument\n";
         let fm: Frontmatter = serde_yaml::from_str(yaml).unwrap();
         let updates = parse_updates(fm.updates);
-        let flat: Vec<(&str, &str)> = updates
-            .iter()
-            .map(|u| (u.date.as_str(), u.text.as_str()))
-            .collect();
+        let flat: Vec<(String, &str)> =
+            updates.iter().map(|u| (u.day(), u.text.as_str())).collect();
         assert_eq!(
             flat,
             [
-                ("", "tightened the argument"),
-                ("2026-10-25", "first draft"),
-                ("2026-11-03", "promoted to essay"),
+                (String::new(), "tightened the argument"),
+                ("25-10-2026".to_string(), "first draft"),
+                ("03-11-2026".to_string(), "promoted to essay"),
             ]
         );
+    }
+
+    #[test]
+    fn parse_date_accepts_european_and_iso() {
+        let nov3 = NaiveDate::from_ymd_opt(2026, 11, 3);
+        for s in ["3-11-2026", "03-11-2026", "3.11.2026", "2026-11-03"] {
+            assert_eq!(parse_date(s), nov3, "{s}");
+        }
+        assert_eq!(parse_date("11/3/2026"), None);
+        assert_eq!(parse_date("tightened"), None);
+    }
+
+    #[test]
+    fn frontmatter_accepts_european_dates() {
+        let fm: Frontmatter = serde_yaml::from_str("title: Hi\ndate: 3-11-2026\n").unwrap();
+        assert_eq!(fm.date, NaiveDate::from_ymd_opt(2026, 11, 3).unwrap());
+        let bad: Result<Frontmatter, _> = serde_yaml::from_str("title: Hi\ndate: soon\n");
+        assert!(bad.is_err());
+    }
+
+    #[test]
+    fn format_date_is_day_first() {
+        let date = NaiveDate::from_ymd_opt(2026, 4, 21).unwrap();
+        assert_eq!(format_date(&date), "21-04-2026");
     }
 }

@@ -7,11 +7,10 @@ use axum::{
     http::{StatusCode, Uri},
     response::{IntoResponse, Redirect},
 };
-use chrono::NaiveDate;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-pub use content::{Post, Scribble, TocEntry, Update};
+pub use content::{format_date, Post, Scribble, TocEntry, Update};
 
 /// Short hex hash of the CSS bundle, used to cache-bust the `<link>` in `base.html`.
 /// Returns `"dev"` if the file can't be read, so local dev still renders.
@@ -90,11 +89,6 @@ pub struct PageMeta {
     pub css_version: String,
 }
 
-#[must_use]
-pub fn format_date(date: &NaiveDate) -> String {
-    date.format("%Y-%m-%d").to_string()
-}
-
 #[derive(Template)]
 #[template(path = "blog_post.html")]
 pub struct PostTemplate {
@@ -145,19 +139,19 @@ pub async fn post(
         path: uri.to_string(),
         css_version: state.css_version.clone(),
     };
-    let date = format_date(&post.date);
     let updated = post
         .updates
         .iter()
-        .map(|u| u.date.as_str())
-        .filter(|d| *d > date.as_str())
+        .filter_map(|u| u.date)
+        .filter(|d| *d > post.date)
         .max()
-        .unwrap_or_default()
-        .to_string();
+        .as_ref()
+        .map(format_date)
+        .unwrap_or_default();
     PostTemplate {
         meta,
         title: post.title.clone(),
-        date,
+        date: format_date(&post.date),
         tags: post.tags.clone(),
         rendered_html: post.rendered_html.clone(),
         toc: post.toc.clone(),
@@ -171,6 +165,7 @@ pub async fn post(
 mod tests {
     use super::*;
     use axum::http::header::LOCATION;
+    use chrono::NaiveDate;
 
     fn sample() -> Post {
         Post {
@@ -215,22 +210,20 @@ mod tests {
 
     #[tokio::test]
     async fn shows_the_newest_update_after_the_date() {
-        let update = |date: &str, text: &str| Update {
-            date: date.to_string(),
+        let update = |day: u32, text: &str| Update {
+            date: NaiveDate::from_ymd_opt(2026, 11, day),
             text: text.to_string(),
         };
         let mut post = sample();
-        post.updates = vec![
-            update("2026-11-01", "first draft"),
-            update("2026-11-05", "tightened"),
-        ];
+        post.updates = vec![update(1, "first draft"), update(5, "tightened")];
         let state = Arc::new(AppState::from_posts(vec![post]));
         let res = get(state, "/essays/queues").await;
         let body = axum::body::to_bytes(res.into_body(), usize::MAX)
             .await
             .unwrap();
         let html = String::from_utf8(body.to_vec()).unwrap();
-        assert!(html.contains("updated 2026-11-05"));
-        assert!(html.contains("first draft"));
+        assert!(html.contains("03-11-2026"));
+        assert!(html.contains("updated 05-11-2026"));
+        assert!(html.contains("01-11-2026</span> first draft"));
     }
 }

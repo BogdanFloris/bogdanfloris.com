@@ -30,10 +30,13 @@ An essay is a markdown file with frontmatter. It's served at
 ```markdown
 ---
 title: "Queues are everywhere"
-date: 2026-11-03
+date: 3-11-2026
 tags: [systems]
 ---
 ```
+
+Dates can be day-first (`3-11-2026`, `3.11.2026`) or ISO (`2026-11-03`), and
+the site shows them day-first.
 
 Essays with two or more `##` headings get a contents sidebar. An `updates`
 list in the frontmatter adds a change log next to it, and its newest date
@@ -41,8 +44,8 @@ shows as "updated":
 
 ```yaml
 updates:
-  - 2026-11-01 first draft
-  - 2026-11-03 tightened the argument
+  - 1-11-2026 first draft
+  - 3-11-2026 tightened the argument
 ```
 
 Scribbles all go in `content/scribbles.md`, newest first. Every `## ` line

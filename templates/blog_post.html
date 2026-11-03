@@ -34,7 +34,7 @@
             <summary>updates</summary>
             <ol>
               {% for update in updates %}
-              <li><span class="update-date">{{ update.date }}</span> {{ update.text }}</li>
+              <li><span class="update-date">{{ update.day() }}</span> {{ update.text }}</li>
               {% endfor %}
             </ol>
           </details>
