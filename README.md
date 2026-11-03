@@ -45,13 +45,28 @@ updates:
   - 2026-11-03 tightened the argument
 ```
 
-Scribbles all go in `content/scribbles.md`, each under a timestamp heading,
-in any order:
+Scribbles all go in `content/scribbles.md`, newest first, each under a
+timestamp heading (the time is optional):
 
 ```markdown
-## 2026-11-03 11:20
+## 2026-11-03 18:05
 
-Trying out a notebook layout for the site.
+The one line from today's notebook page.
 ```
 
+The quickest way in, from any device, is GitHub's editor:
+<https://github.com/BogdanFloris/bogdanfloris.com/edit/master/content/scribbles.md>.
+
 `cargo run -- --drafts` also shows essays with `draft: true`.
+
+## Deploying
+
+Every push to `master` deploys through GitHub Actions
+(`.github/workflows/fly-deploy.yml`). It needs a `FLY_API_TOKEN` repository
+secret, created once with:
+
+```sh
+fly tokens create deploy | gh secret set FLY_API_TOKEN
+```
+
+`fly deploy` from a checkout still works too.
