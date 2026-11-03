@@ -42,6 +42,16 @@ tags: [systems]
 A page lives at `/<kind>s/<slug>`, with the slug from `slug:` or the title.
 To promote a note, change `kind: note` to `kind: essay`; the old URL redirects.
 
+Pages with two or more `##` headings get a contents sidebar. An `updates`
+list in the frontmatter adds a change log next to it, and its newest date
+shows as "updated":
+
+```yaml
+updates:
+  - 2026-11-01 first draft
+  - 2026-11-03 promoted to essay
+```
+
 Scribbles all go in `content/scribbles.md`, each under a timestamp heading,
 in any order:
 

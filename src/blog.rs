@@ -11,7 +11,7 @@ use chrono::NaiveDate;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-pub use content::{Kind, Post, Scribble};
+pub use content::{Kind, Post, Scribble, TocEntry, Update};
 
 /// Short hex hash of the CSS bundle, used to cache-bust the `<link>` in `base.html`.
 /// Returns `"dev"` if the file can't be read, so local dev still renders.
@@ -111,6 +111,10 @@ pub struct PostTemplate {
     pub rendered_html: String,
     pub kind_label: &'static str,
     pub kind_section: &'static str,
+    pub toc: Vec<TocEntry>,
+    pub updates: Vec<Update>,
+    /// The newest update's date, or empty when it adds nothing to `date`.
+    pub updated: String,
 }
 
 #[derive(Template)]
@@ -157,14 +161,26 @@ pub async fn post(
         path: uri.to_string(),
         css_version: state.css_version.clone(),
     };
+    let date = format_date(&post.date);
+    let updated = post
+        .updates
+        .iter()
+        .map(|u| u.date.as_str())
+        .filter(|d| *d > date.as_str())
+        .max()
+        .unwrap_or_default()
+        .to_string();
     PostTemplate {
         meta,
         title: post.title.clone(),
-        date: format_date(&post.date),
+        date,
         tags: post.tags.clone(),
         rendered_html: post.rendered_html.clone(),
         kind_label: post.kind.label(),
         kind_section: post.kind.section(),
+        toc: post.toc.clone(),
+        updates: post.updates.clone(),
+        updated,
     }
     .into_response()
 }
@@ -174,8 +190,8 @@ mod tests {
     use super::*;
     use axum::http::header::LOCATION;
 
-    fn state_with(kind: Kind) -> Arc<AppState> {
-        let post = Post {
+    fn sample(kind: Kind) -> Post {
+        Post {
             title: "Queues".to_string(),
             slug: "queues".to_string(),
             date: NaiveDate::from_ymd_opt(2026, 11, 3).unwrap(),
@@ -183,8 +199,13 @@ mod tests {
             rendered_html: "<p>body</p>".to_string(),
             draft: false,
             kind,
-        };
-        Arc::new(AppState::from_posts(vec![post]))
+            toc: vec![],
+            updates: vec![],
+        }
+    }
+
+    fn state_with(kind: Kind) -> Arc<AppState> {
+        Arc::new(AppState::from_posts(vec![sample(kind)]))
     }
 
     async fn get(state: Arc<AppState>, path: &str) -> axum::response::Response {
@@ -217,6 +238,27 @@ mod tests {
         assert_eq!(res.status(), StatusCode::NOT_FOUND);
     }
 
+    #[tokio::test]
+    async fn shows_the_newest_update_after_the_date() {
+        let update = |date: &str, text: &str| Update {
+            date: date.to_string(),
+            text: text.to_string(),
+        };
+        let mut post = sample(Kind::Essay);
+        post.updates = vec![
+            update("2026-11-01", "first draft"),
+            update("2026-11-05", "tightened"),
+        ];
+        let state = Arc::new(AppState::from_posts(vec![post]));
+        let res = get(state, "/essays/queues").await;
+        let body = axum::body::to_bytes(res.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let html = String::from_utf8(body.to_vec()).unwrap();
+        assert!(html.contains("updated 2026-11-05"));
+        assert!(html.contains("first draft"));
+    }
+
     #[test]
     fn by_kind_filters_and_keeps_order() {
         let mk = |slug: &str, day: u32, kind: Kind| Post {
@@ -227,6 +269,8 @@ mod tests {
             rendered_html: String::new(),
             draft: false,
             kind,
+            toc: vec![],
+            updates: vec![],
         };
         let state = AppState::from_posts(vec![
             mk("c", 3, Kind::Note),

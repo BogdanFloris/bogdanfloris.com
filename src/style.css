@@ -203,6 +203,47 @@ a:focus-visible {
   @apply bg-transparent p-0 text-sm;
 }
 
+/* ---------- Page sidebar (contents, updates) ---------- */
+.article-body {
+  @apply relative;
+}
+.page-aside {
+  @apply mb-8;
+}
+.page-aside-inner {
+  @apply space-y-3 border-l border-bg-2 pl-4;
+}
+.page-aside summary {
+  @apply font-mono text-xs uppercase tracking-wider text-orange cursor-pointer select-none;
+}
+.article .page-aside ol {
+  @apply list-none m-0 mt-2 p-0 space-y-1 text-sm leading-snug;
+}
+.article .page-aside li {
+  @apply my-0;
+}
+.article .page-aside .toc-h3 {
+  @apply pl-3;
+}
+.article .page-aside a {
+  @apply text-fg-3 no-underline hover:text-orange;
+}
+.page-aside .update-date {
+  @apply font-mono text-xs text-fg-4 mr-1;
+}
+/* Wide screens: the sidebar moves into the right margin and follows the reader. */
+@media (min-width: 1240px) {
+  .page-aside {
+    @apply absolute top-0 mb-0;
+    left: calc(100% + 3rem);
+    width: 13rem;
+    height: 100%;
+  }
+  .page-aside-inner {
+    @apply sticky top-8;
+  }
+}
+
 /* ---------- Footer ---------- */
 .site-footer {
   @apply mt-24 pt-6 border-t border-bg-2 font-mono text-xs text-fg-4 flex justify-between gap-x-4 gap-y-3;

@@ -89,6 +89,8 @@ mod tests {
             rendered_html: "<p>body</p>".to_string(),
             draft: false,
             kind: Kind::Essay,
+            toc: vec![],
+            updates: vec![],
         }
     }
 

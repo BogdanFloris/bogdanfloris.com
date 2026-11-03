@@ -1,7 +1,7 @@
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
-use pulldown_cmark::{CodeBlockKind, Event, Options, Parser, Tag, TagEnd};
+use pulldown_cmark::{CodeBlockKind, Event, HeadingLevel, Options, Parser, Tag, TagEnd};
 use serde::Deserialize;
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 use std::sync::OnceLock;
 use syntect::easy::HighlightLines;
 use syntect::highlighting::ThemeSet;
@@ -64,6 +64,60 @@ pub struct Frontmatter {
     pub draft: bool,
     #[serde(default)]
     pub kind: Kind,
+    #[serde(default)]
+    pub updates: Vec<UpdateEntry>,
+}
+
+/// One `updates:` entry, written as `- 2026-11-01 promoted to essay` or
+/// `- 2026-11-01: promoted to essay`.
+#[derive(Debug, Deserialize, PartialEq)]
+#[serde(untagged)]
+pub enum UpdateEntry {
+    Line(String),
+    Dated(BTreeMap<String, String>),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Update {
+    /// `YYYY-MM-DD`, or empty when the entry has no date.
+    pub date: String,
+    pub text: String,
+}
+
+/// Flattens `updates:` entries into a list sorted by date, oldest first.
+#[must_use]
+pub fn parse_updates(entries: Vec<UpdateEntry>) -> Vec<Update> {
+    let is_date = |s: &str| NaiveDate::parse_from_str(s, "%Y-%m-%d").is_ok();
+    let mut updates = Vec::new();
+    for entry in entries {
+        match entry {
+            UpdateEntry::Line(line) => {
+                let line = line.trim();
+                let (date, text) = match line.split_once(' ') {
+                    Some((date, text)) if is_date(date) => (date, text.trim()),
+                    _ if is_date(line) => (line, ""),
+                    _ => ("", line),
+                };
+                updates.push(Update {
+                    date: date.to_string(),
+                    text: text.to_string(),
+                });
+            }
+            UpdateEntry::Dated(map) => {
+                updates.extend(map.into_iter().map(|(date, text)| Update { date, text }));
+            }
+        }
+    }
+    updates.sort_by(|a, b| a.date.cmp(&b.date));
+    updates
+}
+
+/// A `##` (level 2) or `###` (level 3) heading, for the contents sidebar.
+#[derive(Debug, Clone, PartialEq)]
+pub struct TocEntry {
+    pub level: u8,
+    pub id: String,
+    pub text: String,
 }
 
 /// Splits a markdown file's contents into (`frontmatter_yaml`, `body_markdown`).
@@ -127,6 +181,18 @@ fn syntect() -> &'static SyntectBundle {
 
 #[must_use]
 pub fn render_markdown(source: &str) -> String {
+    render(source).html
+}
+
+pub struct Rendered {
+    pub html: String,
+    pub toc: Vec<TocEntry>,
+}
+
+/// Renders markdown to HTML with highlighted code blocks, gives every heading an id,
+/// and collects the `##`/`###` headings for the contents sidebar.
+#[must_use]
+pub fn render(source: &str) -> Rendered {
     let mut options = Options::empty();
     options.insert(Options::ENABLE_STRIKETHROUGH);
     options.insert(Options::ENABLE_TABLES);
@@ -141,6 +207,10 @@ pub fn render_markdown(source: &str) -> String {
     let mut in_code_block: Option<Option<String>> = None;
     let mut code_buffer = String::new();
     let mut events: Vec<Event> = Vec::new();
+    // Index of the open heading's Start event in `events`, and its text so far.
+    let mut heading: Option<(usize, String)> = None;
+    let mut used_ids = HashSet::new();
+    let mut toc = Vec::new();
 
     for event in parser {
         match event {
@@ -177,8 +247,46 @@ pub fn render_markdown(source: &str) -> String {
             Event::Text(text) if in_code_block.is_some() => {
                 code_buffer.push_str(&text);
             }
+            Event::Start(Tag::Heading { .. }) => {
+                heading = Some((events.len(), String::new()));
+                events.push(event);
+            }
+            Event::End(TagEnd::Heading(level)) => {
+                if let Some((start, text)) = heading.take() {
+                    let id = unique_id(&derive_slug(&text), &mut used_ids);
+                    if let Event::Start(Tag::Heading {
+                        level,
+                        classes,
+                        attrs,
+                        ..
+                    }) = std::mem::replace(&mut events[start], Event::SoftBreak)
+                    {
+                        events[start] = Event::Start(Tag::Heading {
+                            level,
+                            id: Some(id.clone().into()),
+                            classes,
+                            attrs,
+                        });
+                    }
+                    let toc_level = match level {
+                        HeadingLevel::H2 => Some(2),
+                        HeadingLevel::H3 => Some(3),
+                        _ => None,
+                    };
+                    if let Some(level) = toc_level {
+                        let text = text.trim().to_string();
+                        toc.push(TocEntry { level, id, text });
+                    }
+                }
+                events.push(Event::End(TagEnd::Heading(level)));
+            }
             other => {
                 if in_code_block.is_none() {
+                    if let (Some((_, text)), Event::Text(t) | Event::Code(t)) =
+                        (heading.as_mut(), &other)
+                    {
+                        text.push_str(t);
+                    }
                     events.push(other);
                 }
             }
@@ -187,7 +295,10 @@ pub fn render_markdown(source: &str) -> String {
 
     debug_assert!(in_code_block.is_none(), "unterminated code block");
     pulldown_cmark::html::push_html(&mut html_out, events.into_iter());
-    html_out
+    Rendered {
+        html: html_out,
+        toc,
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -199,6 +310,8 @@ pub struct Post {
     pub rendered_html: String,
     pub draft: bool,
     pub kind: Kind,
+    pub toc: Vec<TocEntry>,
+    pub updates: Vec<Update>,
 }
 
 impl Post {
@@ -260,15 +373,17 @@ pub fn load_posts(dir: &std::path::Path, include_drafts: bool) -> Vec<Post> {
             continue;
         }
         let slug = fm.slug.clone().unwrap_or_else(|| derive_slug(&fm.title));
-        let rendered = render_markdown(body);
+        let rendered = render(body);
         posts.push(Post {
             title: fm.title,
             slug,
             date: fm.date,
             tags: fm.tags,
-            rendered_html: rendered,
+            rendered_html: rendered.html,
             draft: fm.draft,
             kind: fm.kind,
+            toc: rendered.toc,
+            updates: parse_updates(fm.updates),
         });
     }
     posts.sort_by(|a, b| b.date.cmp(&a.date));
@@ -570,7 +685,7 @@ mod tests {
         assert_eq!(scribbles[0].id, "2026-11-03-1120");
         assert_eq!(scribbles[0].stamp, "2026-11-03 11:20");
         assert!(scribbles[0].html.contains("Still the newer one."));
-        assert!(scribbles[0].html.contains("<h2>Not a stamp</h2>"));
+        assert!(scribbles[0].html.contains(">Not a stamp</h2>"));
         assert_eq!(scribbles[1].id, "2026-11-01-0905");
         assert!(scribbles[1].html.contains("<em>one</em>"));
         assert!(!scribbles[1].html.contains("intro"));
@@ -589,5 +704,53 @@ mod tests {
     fn load_scribbles_without_a_file_is_empty() {
         let tmp = tempfile::tempdir().unwrap();
         assert!(load_scribbles(tmp.path()).is_empty());
+    }
+
+    #[test]
+    fn render_gives_headings_ids_and_collects_h2_h3() {
+        let md = "# Top\n\n## Why *not* surrender?\n\n### Vibe limit\n\n#### Too deep\n\n## Why not surrender\n";
+        let rendered = render(md);
+        assert!(rendered.html.contains("<h2 id=\"why-not-surrender\">"));
+        assert!(rendered.html.contains("<h2 id=\"why-not-surrender-2\">"));
+        assert!(rendered.html.contains("<h4 id=\"too-deep\">"));
+        let toc: Vec<(u8, &str, &str)> = rendered
+            .toc
+            .iter()
+            .map(|e| (e.level, e.id.as_str(), e.text.as_str()))
+            .collect();
+        assert_eq!(
+            toc,
+            [
+                (2, "why-not-surrender", "Why not surrender?"),
+                (3, "vibe-limit", "Vibe limit"),
+                (2, "why-not-surrender-2", "Why not surrender"),
+            ]
+        );
+    }
+
+    #[test]
+    fn render_keeps_inline_code_in_heading_text() {
+        let rendered = render("## The `kind` field\n");
+        assert_eq!(rendered.toc[0].text, "The kind field");
+        assert_eq!(rendered.toc[0].id, "the-kind-field");
+    }
+
+    #[test]
+    fn updates_accept_lines_and_pairs_sorted_by_date() {
+        let yaml = "title: Hi\ndate: 2026-11-03\nupdates:\n  - 2026-11-03 promoted to essay\n  - 2026-10-25: first draft\n  - tightened the argument\n";
+        let fm: Frontmatter = serde_yaml::from_str(yaml).unwrap();
+        let updates = parse_updates(fm.updates);
+        let flat: Vec<(&str, &str)> = updates
+            .iter()
+            .map(|u| (u.date.as_str(), u.text.as_str()))
+            .collect();
+        assert_eq!(
+            flat,
+            [
+                ("", "tightened the argument"),
+                ("2026-10-25", "first draft"),
+                ("2026-11-03", "promoted to essay"),
+            ]
+        );
     }
 }

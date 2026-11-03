@@ -9,12 +9,41 @@
     <h1>{{ title }}</h1>
     <div class="meta">
       <a href="/{{ kind_section }}">{{ kind_label }}</a> &middot; <span class="whitespace-nowrap">{{ date }}</span>
+      {% if !updated.is_empty() %}&middot; <span class="whitespace-nowrap">updated {{ updated }}</span>{% endif %}
       {% if !tags.is_empty() %}
       &middot;
       {% for tag in tags %}{% if !loop.first %} · {% endif %}{{ tag }}{% endfor %}
       {% endif %}
     </div>
-    {{ rendered_html|safe }}
+    <div class="article-body">
+      {% if toc.len() >= 2 || !updates.is_empty() %}
+      <aside class="page-aside">
+        <div class="page-aside-inner">
+          {% if toc.len() >= 2 %}
+          <details open>
+            <summary>contents</summary>
+            <ol>
+              {% for entry in toc %}
+              <li class="toc-h{{ entry.level }}"><a href="#{{ entry.id }}">{{ entry.text }}</a></li>
+              {% endfor %}
+            </ol>
+          </details>
+          {% endif %}
+          {% if !updates.is_empty() %}
+          <details>
+            <summary>updates</summary>
+            <ol>
+              {% for update in updates %}
+              <li><span class="update-date">{{ update.date }}</span> {{ update.text }}</li>
+              {% endfor %}
+            </ol>
+          </details>
+          {% endif %}
+        </div>
+      </aside>
+      {% endif %}
+      {{ rendered_html|safe }}
+    </div>
   </article>
 
   <p class="mt-12 font-mono text-sm"><a class="link" href="/{{ kind_section }}">← all {{ kind_section }}</a></p>
