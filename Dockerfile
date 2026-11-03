@@ -18,10 +18,10 @@ WORKDIR /app
 COPY --from=builder /usr/src/app/bogdanfloris-com /app/bogdanfloris-com
 COPY --from=builder /usr/src/app/dist/css/output.css /app/dist/css/output.css
 COPY --from=builder /usr/src/app/dist/favicon.svg /app/dist/favicon.svg
-COPY --from=builder /usr/src/app/blog_posts /app/blog_posts
+COPY --from=builder /usr/src/app/content /app/content
 
 USER root
-RUN chmod -R a+rX /app/dist /app/blog_posts
+RUN chmod -R a+rX /app/dist /app/content
 USER app
 
 # Run the app

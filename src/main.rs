@@ -1,14 +1,19 @@
 use askama_axum::Template;
-use axum::http::{StatusCode, Uri};
+use axum::http::Uri;
+use axum::response::{Redirect, Response};
 use axum::routing::get;
 use axum::{extract::State, Router};
 use clap::Parser;
 use std::net::{IpAddr, SocketAddr};
 use std::path::PathBuf;
+use std::sync::Arc;
 use tower_http::services::ServeDir;
 
-use blog::content::load_posts;
-use blog::{compute_css_version, format_date, post, AppState, PageMeta};
+use blog::content::{load_posts, load_scribbles};
+use blog::{
+    compute_css_version, format_date, not_found_page, post, AppState, Kind, PageMeta, Post,
+    Scribble,
+};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -19,8 +24,8 @@ struct Args {
     port: u16,
     #[arg(long)]
     drafts: bool,
-    #[arg(long, default_value = "./blog_posts")]
-    posts_dir: PathBuf,
+    #[arg(long, default_value = "./content")]
+    content_dir: PathBuf,
 }
 
 #[tokio::main]
@@ -28,23 +33,40 @@ async fn main() {
     let args = Args::parse();
     tracing_subscriber::fmt::init();
 
-    let posts = load_posts(&args.posts_dir, args.drafts);
-    tracing::info!("loaded {} post(s) from {:?}", posts.len(), args.posts_dir);
+    let posts = load_posts(&args.content_dir, args.drafts);
+    let scribbles = load_scribbles(&args.content_dir);
+    tracing::info!(
+        "loaded {} page(s) and {} scribble(s) from {:?}",
+        posts.len(),
+        scribbles.len(),
+        args.content_dir
+    );
     let css_version = compute_css_version(std::path::Path::new("./dist/css/output.css"));
     tracing::info!("css version {}", css_version);
-    let state = AppState::from_posts(posts).with_css_version(css_version);
+    let state = AppState::from_posts(posts)
+        .with_scribbles(scribbles)
+        .with_css_version(css_version);
 
     let dist_service = ServeDir::new("./dist");
 
-    let app = Router::new()
+    let mut app: Router<Arc<AppState>> = Router::new()
         .nest_service("/dist", dist_service)
         .route("/", get(home))
-        .route("/blog", get(blog_index))
+        .route("/scribbles", get(scribbles_page))
         .route("/post/:slug", get(post))
+        .route("/blog", get(|| async { Redirect::permanent("/essays") }))
         .route("/resume", get(resume))
-        .route("/rss.xml", get(rss))
-        .fallback(not_found)
-        .with_state(state);
+        .route("/rss.xml", get(rss));
+    for kind in Kind::ALL {
+        let section = kind.section();
+        let index = move |uri: Uri, State(state): State<Arc<AppState>>| async move {
+            kind_index(kind, &uri, &state)
+        };
+        app = app
+            .route(&format!("/{section}"), get(index))
+            .route(&format!("/{section}/:slug"), get(post));
+    }
+    let app = app.fallback(not_found).with_state(Arc::new(state));
 
     let ip_addr: IpAddr = args.host.parse().expect("invalid host");
     let addr = SocketAddr::from((ip_addr, args.port));
@@ -56,47 +78,49 @@ async fn main() {
     axum::serve(listener, app).await.expect("serve failed");
 }
 
-async fn home(uri: Uri, State(state): State<AppState>) -> Home {
+async fn home(uri: Uri, State(state): State<Arc<AppState>>) -> Home {
     let meta = PageMeta {
         page_title: "bogdan floris".to_string(),
         banner_title: "bogdan floris".to_string(),
         path: uri.to_string(),
         css_version: state.css_version.clone(),
     };
-    let recent: Vec<RecentPost> = state
-        .latest(3)
-        .into_iter()
-        .map(|p| RecentPost {
-            title: p.title.clone(),
-            slug: p.slug.clone(),
-            date: format_date(&p.date),
-            tags: p.tags.clone(),
-        })
-        .collect();
-    Home { meta, recent }
+    Home {
+        meta,
+        posts: rows(&state.by_kind(Kind::Essay)),
+        latest_scribble: state.scribbles().first().cloned(),
+    }
 }
 
-async fn blog_index(uri: Uri, State(state): State<AppState>) -> BlogIndex {
+fn kind_index(kind: Kind, uri: &Uri, state: &AppState) -> KindIndex {
     let meta = PageMeta {
-        page_title: "blog | bogdan floris".to_string(),
-        banner_title: "blog".to_string(),
+        page_title: format!("{} | bogdan floris", kind.section()),
+        banner_title: kind.section().to_string(),
         path: uri.to_string(),
         css_version: state.css_version.clone(),
     };
-    let posts: Vec<RecentPost> = state
-        .all()
-        .into_iter()
-        .map(|p| RecentPost {
-            title: p.title.clone(),
-            slug: p.slug.clone(),
-            date: format_date(&p.date),
-            tags: p.tags.clone(),
-        })
-        .collect();
-    BlogIndex { meta, posts }
+    KindIndex {
+        meta,
+        heading: kind.section(),
+        description: kind.description(),
+        posts: rows(&state.by_kind(kind)),
+    }
 }
 
-async fn resume(uri: Uri, State(state): State<AppState>) -> Resume {
+async fn scribbles_page(uri: Uri, State(state): State<Arc<AppState>>) -> ScribblesPage {
+    let meta = PageMeta {
+        page_title: "scribbles | bogdan floris".to_string(),
+        banner_title: "scribbles".to_string(),
+        path: uri.to_string(),
+        css_version: state.css_version.clone(),
+    };
+    ScribblesPage {
+        meta,
+        scribbles: state.scribbles().to_vec(),
+    }
+}
+
+async fn resume(uri: Uri, State(state): State<Arc<AppState>>) -> Resume {
     let meta = PageMeta {
         page_title: "resume | bogdan floris".to_string(),
         banner_title: "resume".to_string(),
@@ -106,17 +130,11 @@ async fn resume(uri: Uri, State(state): State<AppState>) -> Resume {
     Resume { meta }
 }
 
-async fn not_found(uri: Uri, State(state): State<AppState>) -> (StatusCode, NotFound) {
-    let meta = PageMeta {
-        page_title: "not found | bogdan floris".to_string(),
-        banner_title: "not found".to_string(),
-        path: uri.to_string(),
-        css_version: state.css_version.clone(),
-    };
-    (StatusCode::NOT_FOUND, NotFound { meta })
+async fn not_found(uri: Uri, State(state): State<Arc<AppState>>) -> Response {
+    not_found_page(&state, &uri)
 }
 
-async fn rss(State(state): State<AppState>) -> impl axum::response::IntoResponse {
+async fn rss(State(state): State<Arc<AppState>>) -> impl axum::response::IntoResponse {
     let xml = blog::rss::build_feed(&state.all());
     (
         [(
@@ -127,10 +145,22 @@ async fn rss(State(state): State<AppState>) -> impl axum::response::IntoResponse
     )
 }
 
+fn rows(posts: &[&Post]) -> Vec<PostRow> {
+    posts
+        .iter()
+        .map(|p| PostRow {
+            title: p.title.clone(),
+            url: p.url(),
+            date: format_date(&p.date),
+            tags: p.tags.clone(),
+        })
+        .collect()
+}
+
 #[derive(Clone)]
-pub struct RecentPost {
+pub struct PostRow {
     pub title: String,
-    pub slug: String,
+    pub url: String,
     pub date: String,
     pub tags: Vec<String>,
 }
@@ -139,24 +169,28 @@ pub struct RecentPost {
 #[template(path = "index.html")]
 struct Home {
     meta: PageMeta,
-    recent: Vec<RecentPost>,
+    posts: Vec<PostRow>,
+    latest_scribble: Option<Scribble>,
 }
 
 #[derive(Template)]
-#[template(path = "blog.html")]
-struct BlogIndex {
+#[template(path = "kind_index.html")]
+struct KindIndex {
     meta: PageMeta,
-    posts: Vec<RecentPost>,
+    heading: &'static str,
+    description: &'static str,
+    posts: Vec<PostRow>,
+}
+
+#[derive(Template)]
+#[template(path = "scribbles.html")]
+struct ScribblesPage {
+    meta: PageMeta,
+    scribbles: Vec<Scribble>,
 }
 
 #[derive(Template)]
 #[template(path = "resume.html")]
 struct Resume {
-    meta: PageMeta,
-}
-
-#[derive(Template)]
-#[template(path = "404.html")]
-struct NotFound {
     meta: PageMeta,
 }

@@ -14,21 +14,18 @@
     </p>
   </section>
 
-  {% if !recent.is_empty() %}
+  {% if !posts.is_empty() %}
   <section class="mb-12">
-    <h2 class="section-title mb-4">recent</h2>
-    <ul class="post-list">
-      {% for post in recent %}
-      <li class="post-row">
-        <span class="date">{{ post.date }}</span>
-        <span class="title"><a href="/post/{{ post.slug }}">{{ post.title }}</a></span>
-        <span class="tags">
-          {% for tag in post.tags %}{% if !loop.first %} · {% endif %}{{ tag }}{% endfor %}
-        </span>
-      </li>
-      {% endfor %}
-    </ul>
-    <p class="mt-4"><a class="link font-mono text-sm" href="/blog">all posts →</a></p>
+    <h2 class="section-title mb-4">essays</h2>
+    {% include "partials/post_list.html" %}
+  </section>
+  {% endif %}
+
+  {% if let Some(s) = latest_scribble %}
+  <section class="mb-12">
+    <h2 class="section-title mb-4">latest scribble</h2>
+    {% include "partials/scribble.html" %}
+    <p class="mt-4"><a class="link font-mono text-sm" href="/scribbles">more scribbles →</a></p>
   </section>
   {% endif %}
 

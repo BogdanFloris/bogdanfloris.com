@@ -1,11 +1,56 @@
-use chrono::NaiveDate;
+use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 use pulldown_cmark::{CodeBlockKind, Event, Options, Parser, Tag, TagEnd};
 use serde::Deserialize;
+use std::collections::HashSet;
 use std::sync::OnceLock;
 use syntect::easy::HighlightLines;
 use syntect::highlighting::ThemeSet;
 use syntect::html::{styled_line_to_highlighted_html, IncludeBackground};
 use syntect::parsing::SyntaxSet;
+
+/// The scribbles stream lives in this one file inside the content dir.
+pub const SCRIBBLES_FILE: &str = "scribbles.md";
+
+#[derive(Debug, Deserialize, PartialEq, Eq, Clone, Copy, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum Kind {
+    Essay,
+    #[default]
+    Note,
+    Log,
+}
+
+impl Kind {
+    pub const ALL: [Kind; 3] = [Kind::Essay, Kind::Note, Kind::Log];
+
+    /// The index route and URL prefix, e.g. `/notes` and `/notes/<slug>`.
+    #[must_use]
+    pub fn section(self) -> &'static str {
+        match self {
+            Kind::Essay => "essays",
+            Kind::Note => "notes",
+            Kind::Log => "logs",
+        }
+    }
+
+    #[must_use]
+    pub fn label(self) -> &'static str {
+        match self {
+            Kind::Essay => "essay",
+            Kind::Note => "note",
+            Kind::Log => "log",
+        }
+    }
+
+    #[must_use]
+    pub fn description(self) -> &'static str {
+        match self {
+            Kind::Essay => "Longer pieces that grew out of notes.",
+            Kind::Note => "Rough notes, one idea each. They change as I learn.",
+            Kind::Log => "Running journals of projects I'm building.",
+        }
+    }
+}
 
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct Frontmatter {
@@ -17,6 +62,8 @@ pub struct Frontmatter {
     pub tags: Vec<String>,
     #[serde(default)]
     pub draft: bool,
+    #[serde(default)]
+    pub kind: Kind,
 }
 
 /// Splits a markdown file's contents into (`frontmatter_yaml`, `body_markdown`).
@@ -151,10 +198,19 @@ pub struct Post {
     pub tags: Vec<String>,
     pub rendered_html: String,
     pub draft: bool,
+    pub kind: Kind,
 }
 
-/// Reads every `*.md` file in `dir`, parses frontmatter, renders the body,
-/// and returns posts sorted newest-first. Drafts are included iff `include_drafts` is true.
+impl Post {
+    #[must_use]
+    pub fn url(&self) -> String {
+        format!("/{}/{}", self.kind.section(), self.slug)
+    }
+}
+
+/// Reads every `*.md` file in `dir` except the scribbles file, parses frontmatter,
+/// renders the body, and returns posts sorted newest-first. Drafts are included iff
+/// `include_drafts` is true.
 /// Errors on individual files are logged via `tracing::warn!` and the file is skipped.
 pub fn load_posts(dir: &std::path::Path, include_drafts: bool) -> Vec<Post> {
     let mut posts = Vec::new();
@@ -174,7 +230,9 @@ pub fn load_posts(dir: &std::path::Path, include_drafts: bool) -> Vec<Post> {
             }
         };
         let path = entry.path();
-        if path.extension().and_then(|s| s.to_str()) != Some("md") {
+        if path.extension().and_then(|s| s.to_str()) != Some("md")
+            || path.file_name().and_then(|s| s.to_str()) == Some(SCRIBBLES_FILE)
+        {
             continue;
         }
         let source = match std::fs::read_to_string(&path) {
@@ -210,10 +268,90 @@ pub fn load_posts(dir: &std::path::Path, include_drafts: bool) -> Vec<Post> {
             tags: fm.tags,
             rendered_html: rendered,
             draft: fm.draft,
+            kind: fm.kind,
         });
     }
     posts.sort_by(|a, b| b.date.cmp(&a.date));
     posts
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Scribble {
+    /// Anchor id, e.g. `2026-11-03-1120`.
+    pub id: String,
+    /// Display form of the heading, e.g. `2026-11-03 11:20`.
+    pub stamp: String,
+    pub at: NaiveDateTime,
+    pub html: String,
+}
+
+/// Splits the scribbles file into entries at `## YYYY-MM-DD HH:MM` (or `## YYYY-MM-DD`)
+/// headings and returns them newest-first. Text before the first heading is ignored.
+#[must_use]
+pub fn parse_scribbles(source: &str) -> Vec<Scribble> {
+    let mut entries: Vec<(NaiveDateTime, bool, String)> = Vec::new();
+    for line in source.lines() {
+        if let Some((at, has_time)) = line.strip_prefix("## ").and_then(parse_stamp) {
+            entries.push((at, has_time, String::new()));
+        } else if let Some((_, _, body)) = entries.last_mut() {
+            body.push_str(line);
+            body.push('\n');
+        }
+    }
+    entries.sort_by(|a, b| b.0.cmp(&a.0));
+
+    let mut used_ids = HashSet::new();
+    entries
+        .into_iter()
+        .map(|(at, has_time, body)| {
+            let (id, stamp) = if has_time {
+                (at.format("%Y-%m-%d-%H%M"), at.format("%Y-%m-%d %H:%M"))
+            } else {
+                (at.format("%Y-%m-%d"), at.format("%Y-%m-%d"))
+            };
+            Scribble {
+                id: unique_id(&id.to_string(), &mut used_ids),
+                stamp: stamp.to_string(),
+                at,
+                html: render_markdown(body.trim()),
+            }
+        })
+        .collect()
+}
+
+fn parse_stamp(heading: &str) -> Option<(NaiveDateTime, bool)> {
+    let heading = heading.trim();
+    if let Ok(at) = NaiveDateTime::parse_from_str(heading, "%Y-%m-%d %H:%M") {
+        return Some((at, true));
+    }
+    NaiveDate::parse_from_str(heading, "%Y-%m-%d")
+        .ok()
+        .map(|d| (d.and_time(NaiveTime::MIN), false))
+}
+
+/// Returns `base`, or `base-2`, `base-3`, ... if it was already handed out.
+fn unique_id(base: &str, used: &mut HashSet<String>) -> String {
+    let base = if base.is_empty() { "section" } else { base };
+    let mut id = base.to_string();
+    let mut n = 1;
+    while !used.insert(id.clone()) {
+        n += 1;
+        id = format!("{base}-{n}");
+    }
+    id
+}
+
+/// Reads `dir/scribbles.md`. A missing file just means no scribbles yet.
+pub fn load_scribbles(dir: &std::path::Path) -> Vec<Scribble> {
+    let path = dir.join(SCRIBBLES_FILE);
+    match std::fs::read_to_string(&path) {
+        Ok(source) => parse_scribbles(&source),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Vec::new(),
+        Err(e) => {
+            tracing::warn!("cannot read {:?}: {}", path, e);
+            Vec::new()
+        }
+    }
 }
 
 #[cfg(test)]
@@ -367,5 +505,89 @@ mod tests {
         .unwrap();
         let posts = load_posts(tmp.path(), false);
         assert_eq!(posts[0].slug, "short");
+    }
+
+    #[test]
+    fn kind_defaults_to_note() {
+        let fm: Frontmatter = serde_yaml::from_str("title: Hi\ndate: 2025-06-24\n").unwrap();
+        assert_eq!(fm.kind, Kind::Note);
+    }
+
+    #[test]
+    fn kind_parses_essay_and_log() {
+        let essay: Frontmatter =
+            serde_yaml::from_str("title: Hi\ndate: 2025-06-24\nkind: essay\n").unwrap();
+        let log: Frontmatter =
+            serde_yaml::from_str("title: Hi\ndate: 2025-06-24\nkind: log\n").unwrap();
+        assert_eq!(essay.kind, Kind::Essay);
+        assert_eq!(log.kind, Kind::Log);
+    }
+
+    #[test]
+    fn unknown_kind_is_a_yaml_error() {
+        let parsed: Result<Frontmatter, _> =
+            serde_yaml::from_str("title: Hi\ndate: 2025-06-24\nkind: poem\n");
+        assert!(parsed.is_err());
+    }
+
+    #[test]
+    fn post_url_uses_the_kind_section() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(
+            tmp.path().join("e.md"),
+            "---\ntitle: Big Idea\ndate: 2025-01-01\nkind: essay\n---\nBody.\n",
+        )
+        .unwrap();
+        let posts = load_posts(tmp.path(), false);
+        assert_eq!(posts[0].url(), "/essays/big-idea");
+    }
+
+    #[test]
+    fn load_posts_skips_the_scribbles_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(
+            tmp.path().join(SCRIBBLES_FILE),
+            "## 2026-11-03 10:00\n\nHi.\n",
+        )
+        .unwrap();
+        std::fs::write(
+            tmp.path().join("n.md"),
+            "---\ntitle: N\ndate: 2025-01-01\n---\nBody.\n",
+        )
+        .unwrap();
+        let posts = load_posts(tmp.path(), false);
+        assert_eq!(posts.len(), 1);
+        assert_eq!(posts[0].title, "N");
+    }
+
+    #[test]
+    fn parse_scribbles_splits_on_stamps_newest_first() {
+        let src = "intro that is ignored\n\n\
+                   ## 2026-11-01 09:05\n\nOlder *one*.\n\n\
+                   ## 2026-11-03 11:20\n\nNewer one.\n\n## Not a stamp\n\nStill the newer one.\n";
+        let scribbles = parse_scribbles(src);
+        assert_eq!(scribbles.len(), 2);
+        assert_eq!(scribbles[0].id, "2026-11-03-1120");
+        assert_eq!(scribbles[0].stamp, "2026-11-03 11:20");
+        assert!(scribbles[0].html.contains("Still the newer one."));
+        assert!(scribbles[0].html.contains("<h2>Not a stamp</h2>"));
+        assert_eq!(scribbles[1].id, "2026-11-01-0905");
+        assert!(scribbles[1].html.contains("<em>one</em>"));
+        assert!(!scribbles[1].html.contains("intro"));
+    }
+
+    #[test]
+    fn parse_scribbles_accepts_date_only_stamps_and_dedupes_ids() {
+        let src = "## 2026-11-02\n\nA.\n\n## 2026-11-02\n\nB.\n";
+        let scribbles = parse_scribbles(src);
+        assert_eq!(scribbles[0].id, "2026-11-02");
+        assert_eq!(scribbles[0].stamp, "2026-11-02");
+        assert_eq!(scribbles[1].id, "2026-11-02-2");
+    }
+
+    #[test]
+    fn load_scribbles_without_a_file_is_empty() {
+        let tmp = tempfile::tempdir().unwrap();
+        assert!(load_scribbles(tmp.path()).is_empty());
     }
 }

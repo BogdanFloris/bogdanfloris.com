@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}{{ meta.page_title }}{% endblock %}
+{% block body %}
+<main class="max-w-[680px] mx-auto px-6 py-16">
+  {% include "partials/letterhead.html" %}
+  {% include "partials/nav.html" %}
+
+  <section class="mb-12">
+    <h1 class="h1 mb-2">{{ heading }}</h1>
+    <p class="index-lede">{{ description }}</p>
+    {% if posts.is_empty() %}
+    <p class="body-text text-fg-3">Nothing here yet.</p>
+    {% else %}
+    {% include "partials/post_list.html" %}
+    {% endif %}
+  </section>
+
+  {% include "partials/footer.html" %}
+</main>
+{% endblock %}

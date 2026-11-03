@@ -86,7 +86,7 @@ a:focus-visible {
 
 /* ---------- Nav ---------- */
 .site-nav {
-  @apply font-mono text-sm text-fg-3 mb-12;
+  @apply flex flex-wrap gap-y-1 font-mono text-sm text-fg-3 mb-12;
 }
 .site-nav a {
   @apply text-fg-2 hover:text-orange underline decoration-transparent underline-offset-4;
@@ -94,8 +94,10 @@ a:focus-visible {
 .site-nav a:hover {
   @apply decoration-orange;
 }
-.site-nav .sep {
-  @apply mx-2 text-fg-4;
+/* The separator trails its link, so a wrapped line never starts with one. */
+.site-nav a:not(:last-child)::after {
+  @apply inline-block mx-2 text-fg-4 font-normal;
+  content: "·";
 }
 .site-nav a.active {
   @apply text-orange font-semibold;
@@ -136,12 +138,34 @@ a:focus-visible {
   content: " · ";
 }
 
+/* ---------- Index pages ---------- */
+.index-lede {
+  @apply font-mono text-sm text-fg-4 mb-8;
+}
+
+/* ---------- Scribbles ---------- */
+.scribble + .scribble {
+  @apply mt-6 pt-6 border-t border-bg-2;
+}
+.scribble-stamp {
+  @apply font-mono text-sm text-fg-4 hover:text-orange;
+}
+.scribble-body > :first-child {
+  @apply mt-2;
+}
+.scribble-body > :last-child {
+  @apply mb-0;
+}
+
 /* ---------- Article ---------- */
 .article h1 {
   @apply text-3xl font-bold font-serif leading-tight mb-3;
 }
 .article .meta {
   @apply font-mono text-sm text-fg-4 mb-10;
+}
+.article .meta a {
+  @apply text-fg-3 hover:text-orange decoration-bg-3 hover:decoration-orange;
 }
 .article h2 {
   @apply text-2xl font-bold font-serif mt-10 mb-4;

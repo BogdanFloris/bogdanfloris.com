@@ -8,7 +8,7 @@
   <article class="article">
     <h1>{{ title }}</h1>
     <div class="meta">
-      {{ date }}
+      <a href="/{{ kind_section }}">{{ kind_label }}</a> &middot; <span class="whitespace-nowrap">{{ date }}</span>
       {% if !tags.is_empty() %}
       &middot;
       {% for tag in tags %}{% if !loop.first %} · {% endif %}{{ tag }}{% endfor %}
@@ -17,7 +17,7 @@
     {{ rendered_html|safe }}
   </article>
 
-  <p class="mt-12 font-mono text-sm"><a class="link" href="/blog">← all posts</a></p>
+  <p class="mt-12 font-mono text-sm"><a class="link" href="/{{ kind_section }}">← all {{ kind_section }}</a></p>
 
   {% include "partials/footer.html" %}
 </main>

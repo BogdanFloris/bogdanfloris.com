@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}{{ meta.page_title }}{% endblock %}
+{% block body %}
+<main class="max-w-[680px] mx-auto px-6 py-16">
+  {% include "partials/letterhead.html" %}
+  {% include "partials/nav.html" %}
+
+  <section class="mb-12">
+    <h1 class="h1 mb-2">scribbles</h1>
+    <p class="index-lede">Short, timestamped thoughts.</p>
+    {% if scribbles.is_empty() %}
+    <p class="body-text text-fg-3">Nothing here yet.</p>
+    {% else %}
+    {% for s in scribbles %}
+    {% include "partials/scribble.html" %}
+    {% endfor %}
+    {% endif %}
+  </section>
+
+  {% include "partials/footer.html" %}
+</main>
+{% endblock %}

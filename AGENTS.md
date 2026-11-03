@@ -20,7 +20,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Check types**: `cargo check`
 
 ### Testing
-- **Run tests**: `make test` (Note: No tests currently exist)
+- **Run tests**: `make test`
 
 ## Architecture
 
@@ -32,20 +32,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Project Structure
 - `/src/main.rs`: Entry point with route handlers and CLI argument parsing
-- `/src/blog.rs`: Blog library with Post struct and AppState management
+- `/src/blog.rs`: AppState, the page handler (with its redirects) and the 404 page
+- `/src/content.rs`: Markdown rendering, frontmatter, page kinds and scribbles
+- `/src/rss.rs`: RSS feed of essays
 - `/templates/`: Askama HTML templates with partials for reusable components
-- `/blog_posts/`: HTML content files for blog posts
+- `/content/`: Pages as markdown with frontmatter, plus `scribbles.md` (formats in README.md)
 - `/dist/`: Static assets served at `/dist` route
 
 ### Key Patterns
 1. **Route Handlers**: Each page has an async handler in main.rs that creates a PageMeta struct
-2. **Blog Posts**: Stored as HTML files in `/blog_posts/`, loaded at startup into AppState
+2. **Content**: Markdown files in `/content/`, loaded at startup into AppState. A page's `kind` (essay, note, log) sets its URL, `/<kind>s/<slug>`; other prefixes for a known slug redirect there
 3. **Templates**: Each page has a corresponding template struct that derives `Template`
-4. **Theme Toggle**: Implemented client-side with localStorage persistence
 
 ### Adding Features
 - **New Route**: Add handler in main.rs, create template struct, add to router
-- **New Blog Post**: Create HTML file in `/blog_posts/`, add to `add_posts()` function
+- **New Page or Scribble**: See "Writing" in README.md; no code changes needed
 - **Static Assets**: Place in `/dist/` directory, accessible via `/dist/` URL path
 
 ### Deployment
