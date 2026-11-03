@@ -1,4 +1,4 @@
-<!-- New scribbles go right below this line, newest first: a "## -DD-MM-YYYY HH:MM" heading (the time is optional), a blank line, then the text. -->
+<!-- New scribbles go right below this line, newest first: "## " and the date (any format, it shows as written), a blank line, then the text. -->
 
 ## 3-11-2026
 

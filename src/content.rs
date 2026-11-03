@@ -1,4 +1,4 @@
-use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
+use chrono::NaiveDate;
 use pulldown_cmark::{CodeBlockKind, Event, HeadingLevel, Options, Parser, Tag, TagEnd};
 use serde::Deserialize;
 use std::collections::{BTreeMap, HashSet};
@@ -347,56 +347,37 @@ pub fn load_posts(dir: &std::path::Path, include_drafts: bool) -> Vec<Post> {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Scribble {
-    /// Anchor id, e.g. `2026-11-03-1120`.
+    /// Anchor id derived from the heading, e.g. `3-11-2026`.
     pub id: String,
-    /// Display form of the heading, e.g. `2026-11-03 11:20`.
+    /// The heading as written, e.g. `3-11-2026`.
     pub stamp: String,
-    pub at: NaiveDateTime,
     pub html: String,
 }
 
-/// Splits the scribbles file into entries at `## YYYY-MM-DD HH:MM` (or `## YYYY-MM-DD`)
-/// headings and returns them newest-first. Text before the first heading is ignored.
+/// Splits the scribbles file at `## ` headings and keeps the file's order, which is
+/// newest first by convention. Headings show as written, in any date format. Text
+/// before the first heading is ignored.
 #[must_use]
 pub fn parse_scribbles(source: &str) -> Vec<Scribble> {
-    let mut entries: Vec<(NaiveDateTime, bool, String)> = Vec::new();
+    let mut entries: Vec<(String, String)> = Vec::new();
     for line in source.lines() {
-        if let Some((at, has_time)) = line.strip_prefix("## ").and_then(parse_stamp) {
-            entries.push((at, has_time, String::new()));
-        } else if let Some((_, _, body)) = entries.last_mut() {
+        if let Some(stamp) = line.strip_prefix("## ") {
+            entries.push((stamp.trim().to_string(), String::new()));
+        } else if let Some((_, body)) = entries.last_mut() {
             body.push_str(line);
             body.push('\n');
         }
     }
-    entries.sort_by(|a, b| b.0.cmp(&a.0));
 
     let mut used_ids = HashSet::new();
     entries
         .into_iter()
-        .map(|(at, has_time, body)| {
-            let (id, stamp) = if has_time {
-                (at.format("%Y-%m-%d-%H%M"), at.format("%Y-%m-%d %H:%M"))
-            } else {
-                (at.format("%Y-%m-%d"), at.format("%Y-%m-%d"))
-            };
-            Scribble {
-                id: unique_id(&id.to_string(), &mut used_ids),
-                stamp: stamp.to_string(),
-                at,
-                html: render_markdown(body.trim()),
-            }
+        .map(|(stamp, body)| Scribble {
+            id: unique_id(&derive_slug(&stamp), &mut used_ids),
+            stamp,
+            html: render_markdown(body.trim()),
         })
         .collect()
-}
-
-fn parse_stamp(heading: &str) -> Option<(NaiveDateTime, bool)> {
-    let heading = heading.trim();
-    if let Ok(at) = NaiveDateTime::parse_from_str(heading, "%Y-%m-%d %H:%M") {
-        return Some((at, true));
-    }
-    NaiveDate::parse_from_str(heading, "%Y-%m-%d")
-        .ok()
-        .map(|d| (d.and_time(NaiveTime::MIN), false))
 }
 
 /// Returns `base`, or `base-2`, `base-3`, ... if it was already handed out.
@@ -608,28 +589,35 @@ mod tests {
     }
 
     #[test]
-    fn parse_scribbles_splits_on_stamps_newest_first() {
-        let src = "intro that is ignored\n\n\
-                   ## 2026-11-01 09:05\n\nOlder *one*.\n\n\
-                   ## 2026-11-03 11:20\n\nNewer one.\n\n## Not a stamp\n\nStill the newer one.\n";
+    fn parse_scribbles_splits_on_every_h2_in_file_order() {
+        let src = "<!-- format note, ignored -->\n\n\
+                   ## 3-11-2026\n\nNewest *one*.\n\n\
+                   ## 2026-11-01 09:05\n\nOlder one.\n\n\
+                   ## whatever I typed\n\nOldest one.\n";
         let scribbles = parse_scribbles(src);
-        assert_eq!(scribbles.len(), 2);
-        assert_eq!(scribbles[0].id, "2026-11-03-1120");
-        assert_eq!(scribbles[0].stamp, "2026-11-03 11:20");
-        assert!(scribbles[0].html.contains("Still the newer one."));
-        assert!(scribbles[0].html.contains(">Not a stamp</h2>"));
-        assert_eq!(scribbles[1].id, "2026-11-01-0905");
-        assert!(scribbles[1].html.contains("<em>one</em>"));
-        assert!(!scribbles[1].html.contains("intro"));
+        let heads: Vec<(&str, &str)> = scribbles
+            .iter()
+            .map(|s| (s.id.as_str(), s.stamp.as_str()))
+            .collect();
+        assert_eq!(
+            heads,
+            [
+                ("3-11-2026", "3-11-2026"),
+                ("2026-11-01-09-05", "2026-11-01 09:05"),
+                ("whatever-i-typed", "whatever I typed"),
+            ]
+        );
+        assert!(scribbles[0].html.contains("<em>one</em>"));
+        assert!(!scribbles[0].html.contains("format note"));
+        assert!(scribbles[2].html.contains("Oldest one."));
     }
 
     #[test]
-    fn parse_scribbles_accepts_date_only_stamps_and_dedupes_ids() {
-        let src = "## 2026-11-02\n\nA.\n\n## 2026-11-02\n\nB.\n";
+    fn parse_scribbles_dedupes_ids_for_the_same_heading() {
+        let src = "## 3-11-2026\n\nB.\n\n## 3-11-2026\n\nA.\n";
         let scribbles = parse_scribbles(src);
-        assert_eq!(scribbles[0].id, "2026-11-02");
-        assert_eq!(scribbles[0].stamp, "2026-11-02");
-        assert_eq!(scribbles[1].id, "2026-11-02-2");
+        assert_eq!(scribbles[0].id, "3-11-2026");
+        assert_eq!(scribbles[1].id, "3-11-2026-2");
     }
 
     #[test]

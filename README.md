@@ -45,11 +45,12 @@ updates:
   - 2026-11-03 tightened the argument
 ```
 
-Scribbles all go in `content/scribbles.md`, newest first, each under a
-timestamp heading (the time is optional):
+Scribbles all go in `content/scribbles.md`, newest first. Every `## ` line
+starts a new scribble and its heading shows on the site as written, so any
+date format works:
 
 ```markdown
-## 2026-11-03 18:05
+## 3-11-2026
 
 The one line from today's notebook page.
 ```
