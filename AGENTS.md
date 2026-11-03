@@ -33,7 +33,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Project Structure
 - `/src/main.rs`: Entry point with route handlers and CLI argument parsing
 - `/src/blog.rs`: AppState, the page handler (with its redirects) and the 404 page
-- `/src/content.rs`: Markdown rendering, frontmatter, page kinds and scribbles
+- `/src/content.rs`: Markdown rendering, frontmatter, essays and scribbles
 - `/src/rss.rs`: RSS feed of essays
 - `/templates/`: Askama HTML templates with partials for reusable components
 - `/content/`: Pages as markdown with frontmatter, plus `scribbles.md` (formats in README.md)
@@ -41,7 +41,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Key Patterns
 1. **Route Handlers**: Each page has an async handler in main.rs that creates a PageMeta struct
-2. **Content**: Markdown files in `/content/`, loaded at startup into AppState. A page's `kind` (essay, note, log) sets its URL, `/<kind>s/<slug>`; other prefixes for a known slug redirect there
+2. **Content**: Markdown files in `/content/`, loaded at startup into AppState. Every page is an essay at `/essays/<slug>` (the old `/post/<slug>` redirects there); `scribbles.md` is the scribbles stream
 3. **Templates**: Each page has a corresponding template struct that derives `Template`
 
 ### Adding Features

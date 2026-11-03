@@ -11,47 +11,6 @@ use syntect::parsing::SyntaxSet;
 /// The scribbles stream lives in this one file inside the content dir.
 pub const SCRIBBLES_FILE: &str = "scribbles.md";
 
-#[derive(Debug, Deserialize, PartialEq, Eq, Clone, Copy, Default)]
-#[serde(rename_all = "lowercase")]
-pub enum Kind {
-    Essay,
-    #[default]
-    Note,
-    Log,
-}
-
-impl Kind {
-    pub const ALL: [Kind; 3] = [Kind::Essay, Kind::Note, Kind::Log];
-
-    /// The index route and URL prefix, e.g. `/notes` and `/notes/<slug>`.
-    #[must_use]
-    pub fn section(self) -> &'static str {
-        match self {
-            Kind::Essay => "essays",
-            Kind::Note => "notes",
-            Kind::Log => "logs",
-        }
-    }
-
-    #[must_use]
-    pub fn label(self) -> &'static str {
-        match self {
-            Kind::Essay => "essay",
-            Kind::Note => "note",
-            Kind::Log => "log",
-        }
-    }
-
-    #[must_use]
-    pub fn description(self) -> &'static str {
-        match self {
-            Kind::Essay => "Longer pieces that grew out of notes.",
-            Kind::Note => "Rough notes, one idea each. They change as I learn.",
-            Kind::Log => "Running journals of projects I'm building.",
-        }
-    }
-}
-
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct Frontmatter {
     pub title: String,
@@ -62,8 +21,6 @@ pub struct Frontmatter {
     pub tags: Vec<String>,
     #[serde(default)]
     pub draft: bool,
-    #[serde(default)]
-    pub kind: Kind,
     #[serde(default)]
     pub updates: Vec<UpdateEntry>,
 }
@@ -309,7 +266,6 @@ pub struct Post {
     pub tags: Vec<String>,
     pub rendered_html: String,
     pub draft: bool,
-    pub kind: Kind,
     pub toc: Vec<TocEntry>,
     pub updates: Vec<Update>,
 }
@@ -317,7 +273,7 @@ pub struct Post {
 impl Post {
     #[must_use]
     pub fn url(&self) -> String {
-        format!("/{}/{}", self.kind.section(), self.slug)
+        format!("/essays/{}", self.slug)
     }
 }
 
@@ -381,7 +337,6 @@ pub fn load_posts(dir: &std::path::Path, include_drafts: bool) -> Vec<Post> {
             tags: fm.tags,
             rendered_html: rendered.html,
             draft: fm.draft,
-            kind: fm.kind,
             toc: rendered.toc,
             updates: parse_updates(fm.updates),
         });
@@ -623,34 +578,11 @@ mod tests {
     }
 
     #[test]
-    fn kind_defaults_to_note() {
-        let fm: Frontmatter = serde_yaml::from_str("title: Hi\ndate: 2025-06-24\n").unwrap();
-        assert_eq!(fm.kind, Kind::Note);
-    }
-
-    #[test]
-    fn kind_parses_essay_and_log() {
-        let essay: Frontmatter =
-            serde_yaml::from_str("title: Hi\ndate: 2025-06-24\nkind: essay\n").unwrap();
-        let log: Frontmatter =
-            serde_yaml::from_str("title: Hi\ndate: 2025-06-24\nkind: log\n").unwrap();
-        assert_eq!(essay.kind, Kind::Essay);
-        assert_eq!(log.kind, Kind::Log);
-    }
-
-    #[test]
-    fn unknown_kind_is_a_yaml_error() {
-        let parsed: Result<Frontmatter, _> =
-            serde_yaml::from_str("title: Hi\ndate: 2025-06-24\nkind: poem\n");
-        assert!(parsed.is_err());
-    }
-
-    #[test]
-    fn post_url_uses_the_kind_section() {
+    fn post_url_is_under_essays() {
         let tmp = tempfile::tempdir().unwrap();
         std::fs::write(
             tmp.path().join("e.md"),
-            "---\ntitle: Big Idea\ndate: 2025-01-01\nkind: essay\n---\nBody.\n",
+            "---\ntitle: Big Idea\ndate: 2025-01-01\n---\nBody.\n",
         )
         .unwrap();
         let posts = load_posts(tmp.path(), false);

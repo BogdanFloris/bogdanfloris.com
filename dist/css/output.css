@@ -427,9 +427,6 @@
   .text-orange {
     color: var(--color-orange);
   }
-  .lowercase {
-    text-transform: lowercase;
-  }
   .uppercase {
     text-transform: uppercase;
   }
@@ -725,20 +722,6 @@ a:focus-visible {
   font-size: var(--text-sm);
   line-height: var(--tw-leading, var(--text-sm--line-height));
   color: var(--color-fg-4);
-}
-.article .meta a {
-  color: var(--color-fg-3);
-  text-decoration-color: var(--color-bg-3);
-  &:hover {
-    @media (hover: hover) {
-      color: var(--color-orange);
-    }
-  }
-  &:hover {
-    @media (hover: hover) {
-      text-decoration-color: var(--color-orange);
-    }
-  }
 }
 .article h2 {
   margin-top: calc(var(--spacing) * 10);

@@ -11,8 +11,7 @@ use tower_http::services::ServeDir;
 
 use blog::content::{load_posts, load_scribbles};
 use blog::{
-    compute_css_version, format_date, not_found_page, post, AppState, Kind, PageMeta, Post,
-    Scribble,
+    compute_css_version, format_date, not_found_page, post, AppState, PageMeta, Post, Scribble,
 };
 
 #[derive(Parser, Debug)]
@@ -49,24 +48,18 @@ async fn main() {
 
     let dist_service = ServeDir::new("./dist");
 
-    let mut app: Router<Arc<AppState>> = Router::new()
+    let app = Router::new()
         .nest_service("/dist", dist_service)
         .route("/", get(home))
+        .route("/essays", get(essays_index))
+        .route("/essays/:slug", get(post))
         .route("/scribbles", get(scribbles_page))
         .route("/post/:slug", get(post))
         .route("/blog", get(|| async { Redirect::permanent("/essays") }))
         .route("/resume", get(resume))
-        .route("/rss.xml", get(rss));
-    for kind in Kind::ALL {
-        let section = kind.section();
-        let index = move |uri: Uri, State(state): State<Arc<AppState>>| async move {
-            kind_index(kind, &uri, &state)
-        };
-        app = app
-            .route(&format!("/{section}"), get(index))
-            .route(&format!("/{section}/:slug"), get(post));
-    }
-    let app = app.fallback(not_found).with_state(Arc::new(state));
+        .route("/rss.xml", get(rss))
+        .fallback(not_found)
+        .with_state(Arc::new(state));
 
     let ip_addr: IpAddr = args.host.parse().expect("invalid host");
     let addr = SocketAddr::from((ip_addr, args.port));
@@ -87,23 +80,21 @@ async fn home(uri: Uri, State(state): State<Arc<AppState>>) -> Home {
     };
     Home {
         meta,
-        posts: rows(&state.by_kind(Kind::Essay)),
+        posts: rows(&state.all()),
         latest_scribble: state.scribbles().first().cloned(),
     }
 }
 
-fn kind_index(kind: Kind, uri: &Uri, state: &AppState) -> KindIndex {
+async fn essays_index(uri: Uri, State(state): State<Arc<AppState>>) -> EssaysIndex {
     let meta = PageMeta {
-        page_title: format!("{} | bogdan floris", kind.section()),
-        banner_title: kind.section().to_string(),
+        page_title: "essays | bogdan floris".to_string(),
+        banner_title: "essays".to_string(),
         path: uri.to_string(),
         css_version: state.css_version.clone(),
     };
-    KindIndex {
+    EssaysIndex {
         meta,
-        heading: kind.section(),
-        description: kind.description(),
-        posts: rows(&state.by_kind(kind)),
+        posts: rows(&state.all()),
     }
 }
 
@@ -174,11 +165,9 @@ struct Home {
 }
 
 #[derive(Template)]
-#[template(path = "kind_index.html")]
-struct KindIndex {
+#[template(path = "essays.html")]
+struct EssaysIndex {
     meta: PageMeta,
-    heading: &'static str,
-    description: &'static str,
     posts: Vec<PostRow>,
 }
 

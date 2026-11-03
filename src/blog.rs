@@ -11,7 +11,7 @@ use chrono::NaiveDate;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-pub use content::{Kind, Post, Scribble, TocEntry, Update};
+pub use content::{Post, Scribble, TocEntry, Update};
 
 /// Short hex hash of the CSS bundle, used to cache-bust the `<link>` in `base.html`.
 /// Returns `"dev"` if the file can't be read, so local dev still renders.
@@ -76,12 +76,6 @@ impl AppState {
             .collect()
     }
 
-    /// Returns the posts of one kind, newest-first.
-    #[must_use]
-    pub fn by_kind(&self, kind: Kind) -> Vec<&Post> {
-        self.all().into_iter().filter(|p| p.kind == kind).collect()
-    }
-
     /// Returns the scribbles, newest-first.
     #[must_use]
     pub fn scribbles(&self) -> &[Scribble] {
@@ -109,8 +103,6 @@ pub struct PostTemplate {
     pub date: String,
     pub tags: Vec<String>,
     pub rendered_html: String,
-    pub kind_label: &'static str,
-    pub kind_section: &'static str,
     pub toc: Vec<TocEntry>,
     pub updates: Vec<Update>,
     /// The newest update's date, or empty when it adds nothing to `date`.
@@ -134,9 +126,7 @@ pub fn not_found_page(state: &AppState, uri: &Uri) -> axum::response::Response {
     (StatusCode::NOT_FOUND, NotFound { meta }).into_response()
 }
 
-/// Serves `/<section>/<slug>`. Any other section in front of a known slug (the old
-/// `/post/<slug>`, or `/notes/<slug>` after a note became an essay) redirects to the
-/// page's current section.
+/// Serves `/essays/<slug>`, and redirects the old `/post/<slug>` there.
 #[allow(clippy::unused_async)]
 pub async fn post(
     Path(slug): Path<String>,
@@ -146,14 +136,8 @@ pub async fn post(
     let Some(post) = state.get(&slug) else {
         return not_found_page(&state, &uri);
     };
-    let (section, encoded_slug) = uri
-        .path()
-        .trim_start_matches('/')
-        .split_once('/')
-        .unwrap_or_default();
-    if section != post.kind.section() {
-        let to = format!("/{}/{}", post.kind.section(), encoded_slug);
-        return Redirect::permanent(&to).into_response();
+    if let Some(encoded_slug) = uri.path().strip_prefix("/post/") {
+        return Redirect::permanent(&format!("/essays/{encoded_slug}")).into_response();
     }
     let meta = PageMeta {
         page_title: format!("{} | bogdan floris", post.title),
@@ -176,8 +160,6 @@ pub async fn post(
         date,
         tags: post.tags.clone(),
         rendered_html: post.rendered_html.clone(),
-        kind_label: post.kind.label(),
-        kind_section: post.kind.section(),
         toc: post.toc.clone(),
         updates: post.updates.clone(),
         updated,
@@ -190,7 +172,7 @@ mod tests {
     use super::*;
     use axum::http::header::LOCATION;
 
-    fn sample(kind: Kind) -> Post {
+    fn sample() -> Post {
         Post {
             title: "Queues".to_string(),
             slug: "queues".to_string(),
@@ -198,14 +180,13 @@ mod tests {
             tags: vec![],
             rendered_html: "<p>body</p>".to_string(),
             draft: false,
-            kind,
             toc: vec![],
             updates: vec![],
         }
     }
 
-    fn state_with(kind: Kind) -> Arc<AppState> {
-        Arc::new(AppState::from_posts(vec![sample(kind)]))
+    fn state() -> Arc<AppState> {
+        Arc::new(AppState::from_posts(vec![sample()]))
     }
 
     async fn get(state: Arc<AppState>, path: &str) -> axum::response::Response {
@@ -214,27 +195,21 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn serves_a_page_at_its_section() {
-        let res = get(state_with(Kind::Note), "/notes/queues").await;
+    async fn serves_an_essay() {
+        let res = get(state(), "/essays/queues").await;
         assert_eq!(res.status(), StatusCode::OK);
     }
 
     #[tokio::test]
-    async fn old_post_urls_redirect_to_the_section() {
-        let res = get(state_with(Kind::Essay), "/post/queues").await;
+    async fn old_post_urls_redirect_to_essays() {
+        let res = get(state(), "/post/queues").await;
         assert_eq!(res.status(), StatusCode::PERMANENT_REDIRECT);
         assert_eq!(res.headers()[LOCATION], "/essays/queues");
     }
 
     #[tokio::test]
-    async fn promoted_notes_redirect_to_essays() {
-        let res = get(state_with(Kind::Essay), "/notes/queues").await;
-        assert_eq!(res.headers()[LOCATION], "/essays/queues");
-    }
-
-    #[tokio::test]
     async fn unknown_slugs_get_the_404_page() {
-        let res = get(state_with(Kind::Note), "/notes/nope").await;
+        let res = get(state(), "/essays/nope").await;
         assert_eq!(res.status(), StatusCode::NOT_FOUND);
     }
 
@@ -244,7 +219,7 @@ mod tests {
             date: date.to_string(),
             text: text.to_string(),
         };
-        let mut post = sample(Kind::Essay);
+        let mut post = sample();
         post.updates = vec![
             update("2026-11-01", "first draft"),
             update("2026-11-05", "tightened"),
@@ -257,32 +232,5 @@ mod tests {
         let html = String::from_utf8(body.to_vec()).unwrap();
         assert!(html.contains("updated 2026-11-05"));
         assert!(html.contains("first draft"));
-    }
-
-    #[test]
-    fn by_kind_filters_and_keeps_order() {
-        let mk = |slug: &str, day: u32, kind: Kind| Post {
-            title: slug.to_string(),
-            slug: slug.to_string(),
-            date: NaiveDate::from_ymd_opt(2026, 11, day).unwrap(),
-            tags: vec![],
-            rendered_html: String::new(),
-            draft: false,
-            kind,
-            toc: vec![],
-            updates: vec![],
-        };
-        let state = AppState::from_posts(vec![
-            mk("c", 3, Kind::Note),
-            mk("b", 2, Kind::Essay),
-            mk("a", 1, Kind::Note),
-        ]);
-        let notes: Vec<&str> = state
-            .by_kind(Kind::Note)
-            .iter()
-            .map(|p| p.slug.as_str())
-            .collect();
-        assert_eq!(notes, ["c", "a"]);
-        assert_eq!(state.by_kind(Kind::Log).len(), 0);
     }
 }

@@ -164,9 +164,6 @@ a:focus-visible {
 .article .meta {
   @apply font-mono text-sm text-fg-4 mb-10;
 }
-.article .meta a {
-  @apply text-fg-3 hover:text-orange decoration-bg-3 hover:decoration-orange;
-}
 .article h2 {
   @apply text-2xl font-bold font-serif mt-10 mb-4;
 }

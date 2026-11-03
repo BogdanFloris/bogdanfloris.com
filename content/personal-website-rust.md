@@ -3,7 +3,6 @@ title: "A Personal Website in Rust and Tailwind"
 date: 2026-04-21
 tags: [rust, web, design]
 slug: personal-website-rust
-kind: essay
 ---
 
 I mainly used React at work, which I'm not a particularly big fan of for a

@@ -1,10 +1,10 @@
-use crate::content::{Kind, Post};
+use crate::content::Post;
 
 const SITE_URL: &str = "https://bogdanfloris.com";
 const SITE_TITLE: &str = "bogdan floris";
 const SITE_DESCRIPTION: &str = "Notes on software, systems, and side quests.";
 
-/// Renders an RSS 2.0 feed of the essays among `posts`. Notes and logs stay out of it.
+/// Renders an RSS 2.0 feed of the essays. Scribbles stay out of it.
 #[must_use]
 pub fn build_feed(posts: &[&Post]) -> String {
     let mut out = String::new();
@@ -16,7 +16,7 @@ pub fn build_feed(posts: &[&Post]) -> String {
     push_tag(&mut out, "description", SITE_DESCRIPTION);
     out.push_str("<language>en</language>\n");
 
-    for post in posts.iter().filter(|p| p.kind == Kind::Essay) {
+    for post in posts {
         out.push_str("<item>\n");
         push_tag(&mut out, "title", &post.title);
         let url = format!("{}{}", SITE_URL, post.url());
@@ -77,7 +77,7 @@ fn xml_escape(input: &str, out: &mut String) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::content::{Kind, Post};
+    use crate::content::Post;
     use chrono::NaiveDate;
 
     fn sample_post(title: &str, slug: &str, date: &str) -> Post {
@@ -88,7 +88,6 @@ mod tests {
             tags: vec![],
             rendered_html: "<p>body</p>".to_string(),
             draft: false,
-            kind: Kind::Essay,
             toc: vec![],
             updates: vec![],
         }
@@ -117,18 +116,6 @@ mod tests {
         assert_eq!(xml.matches("<item>").count(), 2);
         assert!(xml.contains("https://bogdanfloris.com/essays/first"));
         assert!(xml.contains("https://bogdanfloris.com/essays/second"));
-    }
-
-    #[test]
-    fn build_feed_leaves_out_notes_and_logs() {
-        let mut note = sample_post("Note", "note", "2025-01-01");
-        note.kind = Kind::Note;
-        let mut log = sample_post("Log", "log", "2025-01-02");
-        log.kind = Kind::Log;
-        let essay = sample_post("Essay", "essay", "2025-01-03");
-        let xml = build_feed(&[&note, &log, &essay]);
-        assert_eq!(xml.matches("<item>").count(), 1);
-        assert!(xml.contains("https://bogdanfloris.com/essays/essay"));
     }
 
     #[test]

@@ -22,34 +22,27 @@ Or run them in detached mode by appending `&` at the end of the command.
 
 ## Writing
 
-Everything I write lives in `content/`. A page is a markdown file with
-frontmatter, and `kind` decides where it shows up:
+Everything I write lives in `content/`: essays and scribbles.
+
+An essay is a markdown file with frontmatter. It's served at
+`/essays/<slug>`, with the slug from `slug:` or the title:
 
 ```markdown
 ---
 title: "Queues are everywhere"
 date: 2026-11-03
-kind: note
 tags: [systems]
 ---
 ```
 
-- `note` (the default): rough, one idea. Listed at `/notes`.
-- `log`: a running journal of a project. Listed at `/logs`.
-- `essay`: a finished piece. Listed at `/essays` and on the home page, and
-  the only kind in the RSS feed.
-
-A page lives at `/<kind>s/<slug>`, with the slug from `slug:` or the title.
-To promote a note, change `kind: note` to `kind: essay`; the old URL redirects.
-
-Pages with two or more `##` headings get a contents sidebar. An `updates`
+Essays with two or more `##` headings get a contents sidebar. An `updates`
 list in the frontmatter adds a change log next to it, and its newest date
 shows as "updated":
 
 ```yaml
 updates:
   - 2026-11-01 first draft
-  - 2026-11-03 promoted to essay
+  - 2026-11-03 tightened the argument
 ```
 
 Scribbles all go in `content/scribbles.md`, each under a timestamp heading,
@@ -61,4 +54,4 @@ in any order:
 Trying out a notebook layout for the site.
 ```
 
-`cargo run -- --drafts` also shows pages with `draft: true`.
+`cargo run -- --drafts` also shows essays with `draft: true`.
